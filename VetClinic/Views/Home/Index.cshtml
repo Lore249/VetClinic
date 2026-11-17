@@ -1,0 +1,48 @@
+﻿@{
+    ViewData["Title"] = "Ana Sayfa";
+}
+
+<section class="kk-hero rounded-4 p-4 p-md-5 mb-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <h1 class="display-5">Kerem'in Kliniği</h1>
+            <p class="lead">
+                Serdivan'da kedi, köpek, kuş ve tavşan dostlarımız için muayene, aşı ve bakım hizmetleri.
+                Randevunuzu çevrim içi alın, hayvanlarınızın aşı takvimini tek yerden takip edin.
+            </p>
+            @* Giriş yapmış üyeler için randevu bağlantısı, randevu ekranı yazıldığında (Gün 7) eklenecek. *@
+            @if (User.Identity?.IsAuthenticated != true)
+            {
+                <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-lg me-2">Randevu Al</a>
+                <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary btn-lg">Giriş Yap</a>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="row g-4">
+    <div class="col-md-4">
+        <div class="card kk-card h-100">
+            <div class="card-body">
+                <h2 class="h5">Kolay randevu</h2>
+                <p class="text-muted mb-0">Hizmeti ve tarihi seçin, hekimlerimizin boş saatlerini görüp size uygun olanı alın.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card kk-card h-100">
+            <div class="card-body">
+                <h2 class="h5">Aşı takvimi</h2>
+                <p class="text-muted mb-0">Hayvanlarınıza yapılan ve yaklaşan aşıları tek ekranda görün, hiçbir dozu kaçırmayın.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card kk-card h-100">
+            <div class="card-body">
+                <h2 class="h5">Uzman hekimler</h2>
+                <p class="text-muted mb-0">Farklı uzmanlık alanlarından veteriner hekimlerimiz dostlarınızı özenle muayene eder.</p>
+            </div>
+        </div>
+    </div>
+</section>
