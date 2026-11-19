@@ -30,6 +30,13 @@
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Ana Sayfa</a>
                         </li>
+                        @* Bağlantıyı gizlemek yalnızca görünüm içindir; asıl koruma panel controller'larındaki [Authorize(Roles = "Admin")]. *@
+                        @if (User.IsInRole(AppRoles.Admin))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Yönetim Paneli</a>
+                            </li>
+                        }
                     </ul>
                     <ul class="navbar-nav align-items-sm-center">
                         @if (User.Identity?.IsAuthenticated == true)
@@ -60,6 +67,15 @@
     </header>
     <div class="container">
         <main role="main" class="pb-3">
+            @* Kayıttan sonra başka sayfaya yönlendirildiği için (Post-Redirect-Get) başarı mesajı TempData ile taşınır;
+               TempData okunduktan sonra silinir, sayfa yenilenince mesaj tekrar görünmez. *@
+            @if (TempData["SuccessMessage"] is string successMessage)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @successMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+                </div>
+            }
             @RenderBody()
         </main>
     </div>

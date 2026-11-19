@@ -1,0 +1,62 @@
+@model List<Service>
+@{
+    ViewData["Title"] = "Hizmetler";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Hizmetler</h1>
+    <a asp-action="Create" class="btn btn-primary">Yeni Hizmet</a>
+</div>
+
+<div class="card kk-card">
+    <div class="card-body">
+        @if (Model.Count == 0)
+        {
+            <p class="text-muted mb-0">Henüz hizmet eklenmemiş.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Hizmet</th>
+                            <th>Süre</th>
+                            <th>Ücret</th>
+                            <th>Durum</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var service in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@service.Name</div>
+                                    <div class="small text-muted">@service.Description</div>
+                                </td>
+                                <td class="text-nowrap">@service.DurationMinutes dk</td>
+                                @* Kültür tr-TR olduğu için N2 biçimi 1.250,00 şeklinde yazar. *@
+                                <td class="text-nowrap">@service.Price.ToString("N2") ₺</td>
+                                <td>
+                                    @if (service.IsActive)
+                                    {
+                                        <span class="badge text-bg-primary">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-secondary">Pasif</span>
+                                    }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <a asp-action="Edit" asp-route-id="@service.Id" class="btn btn-outline-primary btn-sm">Düzenle</a>
+                                    <a asp-action="Delete" asp-route-id="@service.Id" class="btn btn-outline-danger btn-sm">Sil</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

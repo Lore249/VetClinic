@@ -1,0 +1,30 @@
+@model SpecialtyFormViewModel
+@{
+    ViewData["Title"] = "Uzmanlığı Düzenle";
+}
+
+<h1 class="h3 mb-3">Uzmanlığı Düzenle</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        <form asp-action="Edit" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            @* Hangi kaydın güncelleneceği gizli alanla geri gönderilir. *@
+            <input type="hidden" asp-for="Id" />
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

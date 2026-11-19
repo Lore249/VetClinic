@@ -1,0 +1,23 @@
+@model ServiceFormViewModel
+@{
+    ViewData["Title"] = "Yeni Hizmet";
+}
+
+<h1 class="h3 mb-3">Yeni Hizmet</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <partial name="_ServiceFields" model="Model" />
+
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

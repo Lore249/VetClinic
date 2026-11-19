@@ -5,10 +5,23 @@ using Microsoft.EntityFrameworkCore;
 using VetClinic.Data;
 using VetClinic.Helpers;
 using VetClinic.Models.Entities;
+using VetClinic.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Model binding'in kendi ürettiği mesajlar (DataAnnotations dışındakiler) varsayılan olarak İngilizcedir.
+    // Yalnızca formlarda karşılaşılabilecek olanlar Türkçeleştirildi.
+    var messages = options.ModelBindingMessageProvider;
+    // Sayı alanındaki data-val-number özniteliği; istemci tarafında "sayı girin" uyarısı olarak görünür.
+    messages.SetValueMustBeANumberAccessor(field => $"{field} alanına geçerli bir sayı girin.");
+    // Sayı ya da saat alanına dönüştürülemeyen bir değer gönderilirse (örnek: "abc").
+    messages.SetAttemptedValueIsInvalidAccessor((value, field) => $"'{value}' değeri {field} alanı için geçerli değil.");
+    messages.SetUnknownValueIsInvalidAccessor(field => $"{field} alanına girilen değer geçerli değil.");
+    // Boş bırakılabilmesi mümkün olmayan (int, decimal, TimeOnly gibi) bir alan boş gönderilirse.
+    messages.SetValueMustNotBeNullAccessor(value => "Bu alan zorunludur.");
+});
 
 // SQL Server LocalDB; bağlantı dizesi appsettings.json'da durur ve parola içermez (Windows kimlik doğrulaması).
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -34,6 +47,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
 });
+
+// İş kuralları servis sınıflarında; controller'lar yalnızca bu arayüzleri kullanır.
+// Scoped: her HTTP isteği için bir örnek oluşur, DbContext de istek başına olduğu için onunla aynı ömrü taşır.
+builder.Services.AddScoped<IClinicService, ClinicService>();
+builder.Services.AddScoped<ISpecialtyService, SpecialtyService>();
+builder.Services.AddScoped<IServiceCatalogService, ServiceCatalogService>();
 
 var app = builder.Build();
 
@@ -66,6 +85,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+// Admin paneli bir Area'dır: /Admin/Services/Edit/3 gibi adresler. /Admin yazılınca panelin ana sayfası açılır.
+// Bu route varsayılan route'tan önce tanımlanır; {area:exists} yalnızca var olan bir area adıyla eşleşir.
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Dashboard}/{action=Index}/{id?}")
+    .WithStaticAssets();
 
 app.MapControllerRoute(
     name: "default",

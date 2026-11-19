@@ -1,0 +1,34 @@
+@model ServiceFormViewModel
+@* Ekleme ve düzenleme formlarının ortak alanları. Aynı HTML iki view'da tekrar yazılmasın diye partial view olarak ayrıldı. *@
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label"></label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label"></label>
+    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+    <span asp-validation-for="Description" class="text-danger"></span>
+</div>
+
+<div class="row">
+    <div class="col-sm-6 mb-3">
+        <label asp-for="DurationMinutes" class="form-label"></label>
+        <input asp-for="DurationMinutes" class="form-control" />
+        <span asp-validation-for="DurationMinutes" class="text-danger"></span>
+    </div>
+    <div class="col-sm-6 mb-3">
+        <label asp-for="Price" class="form-label"></label>
+        @* decimal alan type="number" değil type="text" üretilir ve değer tr-TR biçiminde (1250,00) yazılır.
+           Virgüllü değerin istemci tarafında kabul edilmesi için site.js'teki ayara bakın. *@
+        <input asp-for="Price" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="Price" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="form-check mb-3">
+    <input asp-for="IsActive" class="form-check-input" />
+    <label asp-for="IsActive" class="form-check-label"></label>
+</div>

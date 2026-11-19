@@ -1,0 +1,29 @@
+@model Specialty
+@{
+    ViewData["Title"] = "Uzmanlığı Sil";
+}
+
+<h1 class="h3 mb-3">Uzmanlığı Sil</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <p><strong>@Model.Name</strong> uzmanlığını silmek istediğinize emin misiniz?</p>
+
+        @if (Model.Veterinarians.Count > 0)
+        {
+            <div class="alert alert-warning">
+                Bu uzmanlık şu hekimlerden kaldırılacak:
+                @string.Join(", ", Model.Veterinarians.Select(v => v.Title + " " + v.User.FullName)).
+                Hekim kayıtları silinmez.
+            </div>
+        }
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">Sil</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>

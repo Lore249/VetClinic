@@ -1,0 +1,31 @@
+@model Service
+@{
+    ViewData["Title"] = "Hizmeti Sil";
+}
+
+<h1 class="h3 mb-3">Hizmeti Sil</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        @* Randevusu olan hizmet silinemezse servisin döndürdüğü mesaj burada görünür. *@
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <p><strong>@Model.Name</strong> hizmetini silmek istediğinize emin misiniz?</p>
+
+        <dl class="row">
+            <dt class="col-sm-3">Süre</dt>
+            <dd class="col-sm-9">@Model.DurationMinutes dk</dd>
+            <dt class="col-sm-3">Ücret</dt>
+            <dd class="col-sm-9">@Model.Price.ToString("N2") ₺</dd>
+            <dt class="col-sm-3">Durum</dt>
+            <dd class="col-sm-9">@(Model.IsActive ? "Aktif" : "Pasif")</dd>
+        </dl>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">Sil</button>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Düzenle / Pasif Yap</a>
+            <a asp-action="Index" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>

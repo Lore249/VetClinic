@@ -1,0 +1,33 @@
+@{
+    // İç içe layout: üst menü, logo ve alt bilgi ana _Layout'tan gelir; bu dosya yalnızca soldaki panel menüsünü ekler.
+    Layout = "_Layout";
+
+    // Menüde açık olan sayfayı vurgulamak için o anki controller ve action adı okunur.
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+}
+
+<div class="row g-4">
+    <aside class="col-lg-3">
+        <div class="list-group">
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index"
+               class="list-group-item list-group-item-action @(controller == "Dashboard" ? "active" : "")">Panel</a>
+            <a asp-area="Admin" asp-controller="Clinic" asp-action="Edit"
+               class="list-group-item list-group-item-action @(controller == "Clinic" && action == "Edit" ? "active" : "")">Klinik Bilgileri</a>
+            <a asp-area="Admin" asp-controller="Clinic" asp-action="WorkingHours"
+               class="list-group-item list-group-item-action @(controller == "Clinic" && action == "WorkingHours" ? "active" : "")">Çalışma Saatleri</a>
+            <a asp-area="Admin" asp-controller="Specialties" asp-action="Index"
+               class="list-group-item list-group-item-action @(controller == "Specialties" ? "active" : "")">Uzmanlıklar</a>
+            <a asp-area="Admin" asp-controller="Services" asp-action="Index"
+               class="list-group-item list-group-item-action @(controller == "Services" ? "active" : "")">Hizmetler</a>
+        </div>
+    </aside>
+    <section class="col-lg-9">
+        @RenderBody()
+    </section>
+</div>
+
+@* Sayfaların Scripts bölümü (doğrulama betikleri) ana layout'a aktarılır; aktarılmazsa iç içe layout'ta kaybolur ve hata verir. *@
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

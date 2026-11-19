@@ -71,6 +71,12 @@ h1, h2, h3, .h1, .h2, .h3 {
   border-color: var(--kk-green);
 }
 
+/* Admin panelinin sol menüsünde seçili satır; Bootstrap'te sabit mavi yazıldığı için ayrıca yeşile çevrildi. */
+.list-group {
+  --bs-list-group-active-bg: var(--kk-green);
+  --bs-list-group-active-border-color: var(--kk-green);
+}
+
 /* Logo yanındaki klinik adı */
 .kk-brand-text {
   font-weight: 800;
