@@ -1,0 +1,51 @@
+@model List<Veterinarian>
+@{
+    ViewData["Title"] = "Veterinerler";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Veterinerler</h1>
+    <a asp-action="Create" class="btn btn-primary">Yeni Veteriner</a>
+</div>
+
+<div class="card kk-card">
+    <div class="card-body">
+        @if (Model.Count == 0)
+        {
+            <p class="text-muted mb-0">Henüz veteriner eklenmemiş.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Hekim</th>
+                            <th>Uzmanlıklar</th>
+                            <th>Hizmetler</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var veterinarian in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@veterinarian.Title @veterinarian.User.FullName</div>
+                                    <div class="small text-muted">@veterinarian.User.Email</div>
+                                </td>
+                                <td>@string.Join(", ", veterinarian.Specialties.Select(s => s.Name))</td>
+                                <td>@string.Join(", ", veterinarian.Services.Select(s => s.Name))</td>
+                                <td class="text-end text-nowrap">
+                                    <a asp-action="Availability" asp-route-id="@veterinarian.Id" class="btn btn-outline-primary btn-sm">Müsaitlik</a>
+                                    <a asp-action="Edit" asp-route-id="@veterinarian.Id" class="btn btn-outline-primary btn-sm">Düzenle</a>
+                                    <a asp-action="Delete" asp-route-id="@veterinarian.Id" class="btn btn-outline-danger btn-sm">Sil</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

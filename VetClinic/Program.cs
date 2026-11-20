@@ -53,6 +53,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<IClinicService, ClinicService>();
 builder.Services.AddScoped<ISpecialtyService, SpecialtyService>();
 builder.Services.AddScoped<IServiceCatalogService, ServiceCatalogService>();
+builder.Services.AddScoped<IVeterinarianService, VeterinarianService>();
 
 var app = builder.Build();
 

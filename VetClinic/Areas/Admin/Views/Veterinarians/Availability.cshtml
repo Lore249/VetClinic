@@ -1,0 +1,104 @@
+@model AvailabilityViewModel
+@{
+    ViewData["Title"] = "Müsaitlik Saatleri";
+
+    // Gün listesi Pazartesi'den başlasın diye sıra elle verildi (DayOfWeek'te Pazar 0'dır).
+    DayOfWeek[] days =
+    {
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    };
+}
+
+<h1 class="h3 mb-1">Müsaitlik Saatleri</h1>
+<p class="text-muted mb-3">
+    <strong>@Model.VeterinarianName</strong>. Randevular yalnızca bu aralıklara alınabilir.
+    Aynı güne birden fazla aralık eklenebilir (öğle arası gibi), ancak aralıklar çakışamaz.
+</p>
+
+<div class="card kk-card mb-4">
+    <div class="card-body p-4">
+        <h2 class="h5 mb-3">Yeni aralık</h2>
+        <form asp-action="Availability" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <input type="hidden" asp-for="VeterinarianId" />
+
+            <div class="row g-3 align-items-start">
+                <div class="col-sm-4">
+                    <label asp-for="DayOfWeek" class="form-label"></label>
+                    @* Seçenekler elle yazılsa da select tag helper modeldeki günü seçili olarak işaretler. *@
+                    <select asp-for="DayOfWeek" class="form-select">
+                        @foreach (var day in days)
+                        {
+                            <option value="@day">@EnumTexts.ToTurkish(day)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-3">
+                    <label asp-for="StartTime" class="form-label"></label>
+                    @* TimeOnly için tag helper type="time" üretmediği için tür açıkça yazıldı (çalışma saatleri formundaki gibi). *@
+                    <input asp-for="StartTime" type="time" asp-format="{0:HH:mm}" class="form-control" />
+                    <span asp-validation-for="StartTime" class="text-danger"></span>
+                </div>
+                <div class="col-sm-3">
+                    <label asp-for="EndTime" class="form-label"></label>
+                    <input asp-for="EndTime" type="time" asp-format="{0:HH:mm}" class="form-control" />
+                    <span asp-validation-for="EndTime" class="text-danger"></span>
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label d-none d-sm-block">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Ekle</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card kk-card mb-3">
+    <div class="card-body">
+        @if (Model.Availabilities.Count == 0)
+        {
+            <p class="text-muted mb-0">Henüz müsaitlik aralığı eklenmemiş; bu hekime randevu alınamaz.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Gün</th>
+                            <th>Başlangıç</th>
+                            <th>Bitiş</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var availability in Model.Availabilities)
+                        {
+                            <tr>
+                                <td>@EnumTexts.ToTurkish(availability.DayOfWeek)</td>
+                                <td>@availability.StartTime.ToString("HH:mm")</td>
+                                <td>@availability.EndTime.ToString("HH:mm")</td>
+                                <td class="text-end">
+                                    @* Silme bir bağlantı değil POST formudur; confirm() yanlışlıkla tıklamaya karşı onay ister. *@
+                                    <form asp-action="DeleteAvailability" method="post" onsubmit="return confirm('Bu aralık silinsin mi?');">
+                                        <input type="hidden" name="veterinarianId" value="@Model.VeterinarianId" />
+                                        <input type="hidden" name="availabilityId" value="@availability.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<a asp-action="Index">&larr; Veteriner listesine dön</a>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

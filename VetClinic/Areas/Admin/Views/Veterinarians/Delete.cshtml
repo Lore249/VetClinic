@@ -1,0 +1,36 @@
+@model Veterinarian
+@{
+    ViewData["Title"] = "Veterineri Sil";
+}
+
+<h1 class="h3 mb-3">Veterineri Sil</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        @* Randevusu olan hekim silinemezse servisin döndürdüğü mesaj burada görünür. *@
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <p><strong>@Model.Title @Model.User.FullName</strong> adlı hekimi silmek istediğinize emin misiniz?</p>
+
+        <dl class="row">
+            <dt class="col-sm-3">E-posta</dt>
+            <dd class="col-sm-9">@Model.User.Email</dd>
+            <dt class="col-sm-3">Uzmanlıklar</dt>
+            <dd class="col-sm-9">@string.Join(", ", Model.Specialties.Select(s => s.Name))</dd>
+            <dt class="col-sm-3">Hizmetler</dt>
+            <dd class="col-sm-9">@string.Join(", ", Model.Services.Select(s => s.Name))</dd>
+            <dt class="col-sm-3">Müsaitlik</dt>
+            <dd class="col-sm-9">@Model.Availabilities.Count aralık</dd>
+        </dl>
+
+        <div class="alert alert-warning">
+            Hekimin müsaitlik saatleri, uzmanlık ve hizmet bağları ve giriş hesabı da silinir. Randevusu olan hekim silinemez.
+        </div>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">Sil</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>

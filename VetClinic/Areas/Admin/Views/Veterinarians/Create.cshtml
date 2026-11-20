@@ -1,0 +1,37 @@
+@model VeterinarianCreateViewModel
+@{
+    ViewData["Title"] = "Yeni Veteriner";
+}
+
+<h1 class="h3 mb-1">Yeni Veteriner</h1>
+<p class="text-muted mb-3">Hekimin giriş hesabı da bu formla açılır ve Veteriner rolü verilir. Müsaitlik saatleri kayıttan sonra listeden eklenir.</p>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="row">
+                <div class="col-sm-8 mb-3">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" autocomplete="off" />
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+                <div class="col-sm-4 mb-3">
+                    <label asp-for="Password" class="form-label"></label>
+                    <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+            </div>
+
+            <partial name="_VeterinarianFields" model="Model" />
+
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
