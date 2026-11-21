@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Üyelerin yüklediği hayvan fotoğrafları depoya girmez.
+VetClinic/wwwroot/uploads/

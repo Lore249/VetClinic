@@ -1,0 +1,25 @@
+@model Pet
+@{
+    ViewData["Title"] = "Hayvanı Sil";
+}
+
+<h1 class="h3 mb-3">Hayvanı Sil</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        @* Randevusu olan hayvan silinemezse servisin döndürdüğü mesaj burada görünür. *@
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <p><strong>@Model.Name</strong> (@EnumTexts.ToTurkish(Model.Species), @Model.Breed) kaydını silmek istediğinize emin misiniz?</p>
+
+        <div class="alert alert-warning">
+            Hayvanın @Model.VaccinationRecords.Count aşı kaydı ve fotoğrafı da silinir. Randevusu olan hayvan silinemez.
+        </div>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">Sil</button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>

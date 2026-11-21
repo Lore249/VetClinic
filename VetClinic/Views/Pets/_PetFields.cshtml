@@ -1,0 +1,64 @@
+@model PetFormViewModel
+@* Ekleme ve düzenleme formlarının ortak alanları. *@
+
+<div class="row">
+    <div class="col-sm-6 mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="col-sm-6 mb-3">
+        <label asp-for="Species" class="form-label"></label>
+        @* Seçenek metinleri EnumTexts'ten gelir; değer olarak enum adı (Cat, Dog...) gönderilir. *@
+        <select asp-for="Species" class="form-select">
+            @foreach (var species in Enum.GetValues<PetSpecies>())
+            {
+                <option value="@species">@EnumTexts.ToTurkish(species)</option>
+            }
+        </select>
+        <span asp-validation-for="Species" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Breed" class="form-label"></label>
+    <input asp-for="Breed" class="form-control" placeholder="Örnek: Tekir, Golden Retriever, Melez" />
+    <span asp-validation-for="Breed" class="text-danger"></span>
+</div>
+
+<div class="row">
+    <div class="col-sm-6 mb-3">
+        <label asp-for="BirthDate" class="form-label"></label>
+        @* Tag helper DateOnly için type="date" üretmez (düz metin kutusu çıkar); tür açıkça yazıldı.
+           Tarayıcının date kutusu değeri her dilde 2021-04-12 biçiminde bekler ve gönderir. *@
+        <input asp-for="BirthDate" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+        <span asp-validation-for="BirthDate" class="text-danger"></span>
+    </div>
+    <div class="col-sm-6 mb-3">
+        <label asp-for="WeightKg" class="form-label"></label>
+        <input asp-for="WeightKg" class="form-control" inputmode="decimal" placeholder="Örnek: 4,2" />
+        <span asp-validation-for="WeightKg" class="text-danger"></span>
+    </div>
+</div>
+
+@if (Model.ExistingPhotoPath != null)
+{
+    <div class="mb-2">
+        <img src="@Model.ExistingPhotoPath" alt="Mevcut fotoğraf" class="kk-pet-thumb" />
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="RemovePhoto" class="form-check-input" />
+        <label asp-for="RemovePhoto" class="form-check-label"></label>
+    </div>
+}
+
+<div class="mb-3">
+    <label asp-for="Photo" class="form-label"></label>
+    @* accept yalnızca dosya seçme penceresini süzer; asıl uzantı ve boyut kontrolü sunucuda (PetService) yapılır. *@
+    <input asp-for="Photo" type="file" class="form-control" accept=".jpg,.jpeg,.png" />
+    @if (Model.ExistingPhotoPath != null)
+    {
+        <div class="form-text">Yeni fotoğraf seçerseniz mevcut fotoğrafın yerini alır.</div>
+    }
+    <span asp-validation-for="Photo" class="text-danger"></span>
+</div>

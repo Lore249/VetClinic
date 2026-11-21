@@ -77,6 +77,33 @@ h1, h2, h3, .h1, .h2, .h3 {
   --bs-list-group-active-border-color: var(--kk-green);
 }
 
+/* Hayvan kartlarındaki fotoğraf: farklı boyuttaki fotoğraflar kırpılarak aynı yükseklikte gösterilir. */
+.kk-pet-photo {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* Fotoğrafı olmayan hayvan için adın baş harfi */
+.kk-pet-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--kk-green-light);
+  color: var(--kk-green);
+  font-size: 4rem;
+  font-weight: 800;
+}
+
+/* Düzenleme formundaki küçük mevcut fotoğraf */
+.kk-pet-thumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: .5rem;
+}
+
 /* Logo yanındaki klinik adı */
 .kk-brand-text {
   font-weight: 800;

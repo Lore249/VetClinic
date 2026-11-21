@@ -1,0 +1,26 @@
+@model VaccinationFormViewModel
+@{
+    ViewData["Title"] = "Aşı Ekle";
+}
+
+<h1 class="h3 mb-3">Aşı Ekle: @Model.PetName</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        <form asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            @* Aşının ekleneceği hayvan; controller ve servis bu hayvanın kullanıcıya ait olduğunu ayrıca kontrol eder. *@
+            <input type="hidden" asp-for="PetId" />
+
+            <partial name="_VaccinationFields" model="Model" />
+
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a asp-controller="Pets" asp-action="Details" asp-route-id="@Model.PetId" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

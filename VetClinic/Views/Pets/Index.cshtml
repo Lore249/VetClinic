@@ -1,0 +1,50 @@
+@model List<Pet>
+@{
+    ViewData["Title"] = "Hayvanlarım";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Hayvanlarım</h1>
+    <a asp-action="Create" class="btn btn-primary">Yeni Hayvan</a>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="card kk-card">
+        <div class="card-body">
+            <p class="text-muted mb-0">Henüz hayvan eklemediniz. Randevu alabilmek için önce hayvanınızı kaydedin.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var pet in Model)
+        {
+            <div class="col-sm-6 col-lg-4">
+                <div class="card kk-card h-100">
+                    @if (pet.PhotoPath != null)
+                    {
+                        <img src="@pet.PhotoPath" alt="@pet.Name" class="kk-pet-photo" />
+                    }
+                    else
+                    {
+                        @* Fotoğraf yoksa adın baş harfi gösterilir. *@
+                        <div class="kk-pet-photo kk-pet-placeholder">@pet.Name.Substring(0, 1).ToUpper()</div>
+                    }
+                    <div class="card-body">
+                        <h2 class="h5 mb-1">@pet.Name</h2>
+                        <p class="text-muted mb-2">@EnumTexts.ToTurkish(pet.Species) · @pet.Breed</p>
+                        @* tr-TR kültüründe 0.## biçimi 4,2 şeklinde yazar. *@
+                        <p class="small mb-0">Doğum: @pet.BirthDate.ToString("dd.MM.yyyy") · @pet.WeightKg.ToString("0.##") kg</p>
+                    </div>
+                    <div class="card-footer bg-white border-0 pt-0 pb-3">
+                        <a asp-action="Details" asp-route-id="@pet.Id" class="btn btn-primary btn-sm">Detay ve Aşılar</a>
+                        <a asp-action="Edit" asp-route-id="@pet.Id" class="btn btn-outline-primary btn-sm">Düzenle</a>
+                        <a asp-action="Delete" asp-route-id="@pet.Id" class="btn btn-outline-danger btn-sm">Sil</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -54,6 +54,8 @@ builder.Services.AddScoped<IClinicService, ClinicService>();
 builder.Services.AddScoped<ISpecialtyService, SpecialtyService>();
 builder.Services.AddScoped<IServiceCatalogService, ServiceCatalogService>();
 builder.Services.AddScoped<IVeterinarianService, VeterinarianService>();
+builder.Services.AddScoped<IPetService, PetService>();
+builder.Services.AddScoped<IVaccinationService, VaccinationService>();
 
 var app = builder.Build();
 
@@ -81,6 +83,11 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 });
 
 app.UseRouting();
+
+// MapStaticAssets yalnızca derleme anında wwwroot'ta bulunan dosyaları sunar. Üyelerin çalışırken yüklediği
+// hayvan fotoğrafları (wwwroot/uploads/pets) sonradan oluştuğu için onları UseStaticFiles sunar.
+// UseRouting'den sonra durur: css/js gibi bilinen dosyalar MapStaticAssets'le eşleşmiş olur ve UseStaticFiles onları atlar.
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,0 +1,24 @@
+@model PetFormViewModel
+@{
+    ViewData["Title"] = "Yeni Hayvan";
+}
+
+<h1 class="h3 mb-3">Yeni Hayvan</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        @* Dosya gönderebilmek için form multipart/form-data olarak kodlanır; yoksa sunucuya yalnızca dosya adı gider. *@
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <partial name="_PetFields" model="Model" />
+
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

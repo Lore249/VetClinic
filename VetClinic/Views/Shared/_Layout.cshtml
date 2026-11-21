@@ -31,6 +31,12 @@
                             <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Ana Sayfa</a>
                         </li>
                         @* Bağlantıyı gizlemek yalnızca görünüm içindir; asıl koruma panel controller'larındaki [Authorize(Roles = "Admin")]. *@
+                        @if (User.IsInRole(AppRoles.Member))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="Pets" asp-action="Index">Hayvanlarım</a>
+                            </li>
+                        }
                         @if (User.IsInRole(AppRoles.Admin))
                         {
                             <li class="nav-item">

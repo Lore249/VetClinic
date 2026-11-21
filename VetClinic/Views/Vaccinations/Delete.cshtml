@@ -1,0 +1,23 @@
+@model VaccinationRecord
+@{
+    ViewData["Title"] = "Aşı Kaydını Sil";
+}
+
+<h1 class="h3 mb-3">Aşı Kaydını Sil</h1>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <p>
+            <strong>@Model.Pet.Name</strong> için <strong>@Model.AdministeredOn.ToString("dd.MM.yyyy")</strong> tarihli
+            <strong>@Model.VaccineName</strong> kaydını silmek istediğinize emin misiniz?
+        </p>
+
+        <form asp-action="Delete" method="post">
+            <input type="hidden" asp-for="Id" />
+            <button type="submit" class="btn btn-danger">Sil</button>
+            <a asp-controller="Pets" asp-action="Details" asp-route-id="@Model.PetId" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,22 @@
+@model VaccinationFormViewModel
+@* Ekleme ve düzenleme formlarının ortak alanları. Tarih kuralları (ileri tarih olamaz, sonraki doz sonra olmalı) serviste kontrol edilir. *@
+
+<div class="mb-3">
+    <label asp-for="VaccineName" class="form-label"></label>
+    <input asp-for="VaccineName" class="form-control" placeholder="Örnek: Karma aşı, Kuduz" />
+    <span asp-validation-for="VaccineName" class="text-danger"></span>
+</div>
+
+<div class="row">
+    <div class="col-sm-6 mb-3">
+        <label asp-for="AdministeredOn" class="form-label"></label>
+        @* DateOnly için type="date" açıkça yazıldı (hayvan formundaki doğum tarihi gibi). *@
+        <input asp-for="AdministeredOn" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+        <span asp-validation-for="AdministeredOn" class="text-danger"></span>
+    </div>
+    <div class="col-sm-6 mb-3">
+        <label asp-for="NextDoseOn" class="form-label"></label>
+        <input asp-for="NextDoseOn" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+        <span asp-validation-for="NextDoseOn" class="text-danger"></span>
+    </div>
+</div>
