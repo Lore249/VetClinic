@@ -1,0 +1,61 @@
+@model AppointmentSlotsViewModel
+@{
+    ViewData["Title"] = "Boş Saatler";
+}
+
+<h1 class="h3 mb-1">Boş Saatler</h1>
+<p class="text-muted mb-3">Hizmeti ve tarihi seçin; o hizmeti verebilen hekimlerin o günkü boş başlangıç saatleri listelenir. Bir saate tıklayınca randevu formu dolu açılır.</p>
+
+<div class="card kk-card mb-4">
+    <div class="card-body p-4">
+        @* GET formu: değerler adres çubuğuna yazılır (?ServiceId=1&Date=2026-11-23), sayfa yenilenince arama korunur. *@
+        <form asp-action="Slots" method="get" class="row g-3 align-items-end">
+            <div class="col-sm-5">
+                <label asp-for="ServiceId" class="form-label"></label>
+                <select asp-for="ServiceId" class="form-select">
+                    <option value="">Seçin</option>
+                    @foreach (var service in Model.ServiceOptions)
+                    {
+                        <option value="@service.Id">@service.Name (@service.DurationMinutes dk)@(service.IsActive ? "" : " - pasif")</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="Date" class="form-label"></label>
+                <input asp-for="Date" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+            </div>
+            <div class="col-sm-3">
+                <button type="submit" class="btn btn-primary w-100">Göster</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+@if (Model.Slots != null)
+{
+    if (Model.Slots.Count == 0)
+    {
+        <div class="alert alert-info">Bu tarihte uygun saat yok: klinik kapalı olabilir, hekimler o gün çalışmıyor olabilir ya da saatler dolu olabilir.</div>
+    }
+
+    foreach (var slot in Model.Slots)
+    {
+        <div class="card kk-card mb-3">
+            <div class="card-body">
+                <h2 class="h6 mb-3">@slot.VeterinarianName</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var time in slot.StartTimes)
+                    {
+                        <a asp-action="Create"
+                           asp-route-serviceId="@Model.ServiceId"
+                           asp-route-veterinarianId="@slot.VeterinarianId"
+                           asp-route-startTime="@Model.Date!.Value.ToDateTime(time).ToString("yyyy-MM-ddTHH:mm")"
+                           class="btn btn-outline-primary btn-sm">@time.ToString("HH:mm")</a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}

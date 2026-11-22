@@ -47,13 +47,13 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(v => v.Id == id);
         }
 
-        public async Task<string?> CreateAsync(VeterinarianCreateViewModel model)
+        public async Task<ServiceResult<int>> CreateAsync(VeterinarianCreateViewModel model)
         {
             // Formdan gelen id'lerle veritabanındaki kayıtlar alınır; var olmayan bir id gönderilirse kendiliğinden elenir.
             var services = await _context.Services.Where(s => model.SelectedServiceIds.Contains(s.Id)).ToListAsync();
             if (services.Count == 0)
             {
-                return NoServiceSelectedError;
+                return ServiceResult<int>.Validation(NoServiceSelectedError);
             }
 
             var specialties = await _context.Specialties.Where(s => model.SelectedSpecialtyIds.Contains(s.Id)).ToListAsync();
@@ -75,25 +75,26 @@ namespace VetClinic.Services
             if (!result.Succeeded)
             {
                 // Aynı e-posta gibi hatalar TurkishIdentityErrorDescriber sayesinde Türkçe gelir.
-                return string.Join(" ", result.Errors.Select(e => e.Description));
+                return ServiceResult<int>.Validation(string.Join(" ", result.Errors.Select(e => e.Description)));
             }
 
             await _userManager.AddToRoleAsync(user, AppRoles.Veterinarian);
 
-            _context.Veterinarians.Add(new Veterinarian
+            var veterinarian = new Veterinarian
             {
                 Title = model.Title.Trim(),
                 UserId = user.Id,
                 Specialties = specialties,
                 Services = services
-            });
+            };
+            _context.Veterinarians.Add(veterinarian);
             await _context.SaveChangesAsync();
 
             await transaction.CommitAsync();
-            return null;
+            return ServiceResult<int>.Ok(veterinarian.Id);
         }
 
-        public async Task<string?> UpdateAsync(VeterinarianFormViewModel model)
+        public async Task<ServiceResult<bool>> UpdateAsync(VeterinarianFormViewModel model)
         {
             // Bağlar değiştirileceği için mevcut uzmanlık ve hizmetler de yüklenir (AsNoTracking yok: EF değişiklikleri izlemeli).
             var veterinarian = await _context.Veterinarians
@@ -104,13 +105,13 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(v => v.Id == model.Id);
             if (veterinarian == null)
             {
-                return "Hekim bulunamadı.";
+                return ServiceResult<bool>.NotFound("Hekim bulunamadı.");
             }
 
             var services = await _context.Services.Where(s => model.SelectedServiceIds.Contains(s.Id)).ToListAsync();
             if (services.Count == 0)
             {
-                return NoServiceSelectedError;
+                return ServiceResult<bool>.Validation(NoServiceSelectedError);
             }
 
             var specialties = await _context.Specialties.Where(s => model.SelectedSpecialtyIds.Contains(s.Id)).ToListAsync();
@@ -133,23 +134,23 @@ namespace VetClinic.Services
             }
 
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        public async Task<string?> DeleteAsync(int id)
+        public async Task<ServiceResult<bool>> DeleteAsync(int id)
         {
             var veterinarian = await _context.Veterinarians
                 .Include(v => v.User)
                 .FirstOrDefaultAsync(v => v.Id == id);
             if (veterinarian == null)
             {
-                return "Hekim bulunamadı.";
+                return ServiceResult<bool>.NotFound("Hekim bulunamadı.");
             }
 
             // İlişki Restrict olduğu için randevusu olan hekim silinmeye çalışılırsa veritabanı hata verir; önce kontrol edilir.
             if (await _context.Appointments.AnyAsync(a => a.VeterinarianId == id))
             {
-                return "Bu hekimin randevuları olduğu için silinemez. Geçmiş randevular hekim bilgisiyle birlikte saklanmalıdır.";
+                return ServiceResult<bool>.Validation("Bu hekimin randevuları olduğu için silinemez. Geçmiş randevular hekim bilgisiyle birlikte saklanmalıdır.");
             }
 
             // Hekim kaydı ve giriş hesabı birlikte silinir; biri başarısız olursa diğeri de geri alınır.
@@ -163,23 +164,23 @@ namespace VetClinic.Services
             var result = await _userManager.DeleteAsync(veterinarian.User);
             if (!result.Succeeded)
             {
-                return string.Join(" ", result.Errors.Select(e => e.Description));
+                return ServiceResult<bool>.Validation(string.Join(" ", result.Errors.Select(e => e.Description)));
             }
 
             await transaction.CommitAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        public async Task<string?> AddAvailabilityAsync(AvailabilityViewModel model)
+        public async Task<ServiceResult<int>> AddAvailabilityAsync(AvailabilityViewModel model)
         {
             if (!await _context.Veterinarians.AnyAsync(v => v.Id == model.VeterinarianId))
             {
-                return "Hekim bulunamadı.";
+                return ServiceResult<int>.NotFound("Hekim bulunamadı.");
             }
 
             if (model.StartTime >= model.EndTime)
             {
-                return "Başlangıç saati bitiş saatinden önce olmalıdır.";
+                return ServiceResult<int>.Validation("Başlangıç saati bitiş saatinden önce olmalıdır.");
             }
 
             // Aynı hekimin aynı gündeki aralıkları çakışamaz. Koşul randevu çakışmasıyla aynıdır:
@@ -192,37 +193,39 @@ namespace VetClinic.Services
                     && model.StartTime < a.EndTime
                     && a.StartTime < model.EndTime);
 
+            // Müsaitlik aralıklarının çakışması bir kural ihlalidir (Validation); Conflict yalnızca randevu çakışmaları içindir.
             if (conflict != null)
             {
-                return "Bu aralık, hekimin " + EnumTexts.ToTurkish(conflict.DayOfWeek) + " "
+                return ServiceResult<int>.Validation("Bu aralık, hekimin " + EnumTexts.ToTurkish(conflict.DayOfWeek) + " "
                     + conflict.StartTime.ToString("HH:mm") + "-" + conflict.EndTime.ToString("HH:mm")
-                    + " aralığıyla çakışıyor.";
+                    + " aralığıyla çakışıyor.");
             }
 
-            _context.VeterinarianAvailabilities.Add(new VeterinarianAvailability
+            var availability = new VeterinarianAvailability
             {
                 VeterinarianId = model.VeterinarianId,
                 DayOfWeek = model.DayOfWeek,
                 StartTime = model.StartTime,
                 EndTime = model.EndTime
-            });
+            };
+            _context.VeterinarianAvailabilities.Add(availability);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<int>.Ok(availability.Id);
         }
 
-        public async Task<string?> DeleteAvailabilityAsync(int veterinarianId, int availabilityId)
+        public async Task<ServiceResult<bool>> DeleteAvailabilityAsync(int veterinarianId, int availabilityId)
         {
             // Hekim id'si de aranır: aralık yalnızca açık olan hekimin sayfasından silinebilsin.
             var availability = await _context.VeterinarianAvailabilities
                 .FirstOrDefaultAsync(a => a.Id == availabilityId && a.VeterinarianId == veterinarianId);
             if (availability == null)
             {
-                return "Müsaitlik aralığı bulunamadı.";
+                return ServiceResult<bool>.NotFound("Müsaitlik aralığı bulunamadı.");
             }
 
             _context.VeterinarianAvailabilities.Remove(availability);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
     }
 }

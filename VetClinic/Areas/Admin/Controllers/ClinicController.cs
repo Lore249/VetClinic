@@ -46,11 +46,11 @@ namespace VetClinic.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var error = await _clinicService.UpdateClinicAsync(model);
-            if (error != null)
+            var result = await _clinicService.UpdateClinicAsync(model);
+            if (!result.Success)
             {
-                ModelState.AddModelError(string.Empty, error);
-                return View(model);
+                // NotFound ise 404 döner; diğer hatalar ModelState'e eklenir ve form yeniden gösterilir.
+                return this.HandleServiceError(result) ?? View(model);
             }
 
             // Kayıttan sonra yönlendirme yapılır (Post-Redirect-Get); mesaj TempData ile bir sonraki isteğe taşınır.
@@ -87,11 +87,10 @@ namespace VetClinic.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var error = await _clinicService.UpdateWorkingHoursAsync(model.Days);
-            if (error != null)
+            var result = await _clinicService.UpdateWorkingHoursAsync(model.Days);
+            if (!result.Success)
             {
-                ModelState.AddModelError(string.Empty, error);
-                return View(model);
+                return this.HandleServiceError(result) ?? View(model);
             }
 
             TempData["SuccessMessage"] = "Çalışma saatleri kaydedildi.";

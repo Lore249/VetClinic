@@ -4,21 +4,21 @@ using VetClinic.Models.ViewModels;
 namespace VetClinic.Services
 {
     // Hekimler (giriş hesaplarıyla birlikte) ve haftalık müsaitlik aralıkları.
-    // Ekleme, güncelleme ve silme başarılıysa null, değilse kullanıcıya gösterilecek hata mesajını döner.
+    // Ekleme metotları yeni kaydın id'sini, güncelleme ve silme bool döner; hepsi ServiceResult içinde.
     public interface IVeterinarianService
     {
         Task<List<Veterinarian>> GetAllAsync();
 
         Task<Veterinarian?> GetByIdAsync(int id);
 
-        Task<string?> CreateAsync(VeterinarianCreateViewModel model);
+        Task<ServiceResult<int>> CreateAsync(VeterinarianCreateViewModel model);
 
-        Task<string?> UpdateAsync(VeterinarianFormViewModel model);
+        Task<ServiceResult<bool>> UpdateAsync(VeterinarianFormViewModel model);
 
-        Task<string?> DeleteAsync(int id);
+        Task<ServiceResult<bool>> DeleteAsync(int id);
 
-        Task<string?> AddAvailabilityAsync(AvailabilityViewModel model);
+        Task<ServiceResult<int>> AddAvailabilityAsync(AvailabilityViewModel model);
 
-        Task<string?> DeleteAvailabilityAsync(int veterinarianId, int availabilityId);
+        Task<ServiceResult<bool>> DeleteAvailabilityAsync(int veterinarianId, int availabilityId);
     }
 }

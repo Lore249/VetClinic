@@ -4,17 +4,17 @@ using VetClinic.Models.ViewModels;
 namespace VetClinic.Services
 {
     // Üyenin evcil hayvanları. Her metot sahibin id'sini alır ve yalnızca o kullanıcının kayıtlarıyla çalışır.
-    // Ekleme, güncelleme ve silme başarılıysa null, değilse kullanıcıya gösterilecek hata mesajını döner.
+    // Ekleme yeni kaydın id'sini, güncelleme ve silme bool döner; hepsi ServiceResult içinde.
     public interface IPetService
     {
         Task<List<Pet>> GetMyPetsAsync(string ownerId);
 
         Task<Pet?> GetMyPetAsync(string ownerId, int petId);
 
-        Task<string?> CreateAsync(string ownerId, PetFormViewModel model);
+        Task<ServiceResult<int>> CreateAsync(string ownerId, PetFormViewModel model);
 
-        Task<string?> UpdateAsync(string ownerId, PetFormViewModel model);
+        Task<ServiceResult<bool>> UpdateAsync(string ownerId, PetFormViewModel model);
 
-        Task<string?> DeleteAsync(string ownerId, int petId);
+        Task<ServiceResult<bool>> DeleteAsync(string ownerId, int petId);
     }
 }

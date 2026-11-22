@@ -39,11 +39,10 @@ namespace VetClinic.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var error = await _serviceCatalog.CreateAsync(model);
-            if (error != null)
+            var result = await _serviceCatalog.CreateAsync(model);
+            if (!result.Success)
             {
-                ModelState.AddModelError(string.Empty, error);
-                return View(model);
+                return this.HandleServiceError(result) ?? View(model);
             }
 
             TempData["SuccessMessage"] = "Hizmet eklendi.";
@@ -81,11 +80,10 @@ namespace VetClinic.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var error = await _serviceCatalog.UpdateAsync(model);
-            if (error != null)
+            var result = await _serviceCatalog.UpdateAsync(model);
+            if (!result.Success)
             {
-                ModelState.AddModelError(string.Empty, error);
-                return View(model);
+                return this.HandleServiceError(result) ?? View(model);
             }
 
             TempData["SuccessMessage"] = "Hizmet güncellendi.";
@@ -109,9 +107,15 @@ namespace VetClinic.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var error = await _serviceCatalog.DeleteAsync(id);
-            if (error != null)
+            var result = await _serviceCatalog.DeleteAsync(id);
+            if (!result.Success)
             {
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
+
                 // Silinemediyse (örneğin randevusu varsa) onay sayfası hata mesajıyla yeniden gösterilir.
                 var service = await _serviceCatalog.GetByIdAsync(id);
                 if (service == null)
@@ -119,7 +123,6 @@ namespace VetClinic.Areas.Admin.Controllers
                     return NotFound();
                 }
 
-                ModelState.AddModelError(string.Empty, error);
                 return View(service);
             }
 

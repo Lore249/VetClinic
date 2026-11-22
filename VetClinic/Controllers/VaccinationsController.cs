@@ -55,14 +55,19 @@ namespace VetClinic.Controllers
 
             if (ModelState.IsValid)
             {
-                var error = await _vaccinationService.CreateAsync(CurrentUserId, model);
-                if (error == null)
+                var result = await _vaccinationService.CreateAsync(CurrentUserId, model);
+                if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Aşı kaydı eklendi.";
                     return RedirectToAction("Details", "Pets", new { id = pet.Id });
                 }
 
-                ModelState.AddModelError(string.Empty, error);
+                // NotFound/Forbidden ise o sonuç döner; diğer hatalar ModelState'e eklenir ve form yeniden gösterilir.
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
             }
 
             model.PetName = pet.Name;
@@ -104,14 +109,18 @@ namespace VetClinic.Controllers
 
             if (ModelState.IsValid)
             {
-                var error = await _vaccinationService.UpdateAsync(CurrentUserId, model);
-                if (error == null)
+                var result = await _vaccinationService.UpdateAsync(CurrentUserId, model);
+                if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Aşı kaydı güncellendi.";
                     return RedirectToAction("Details", "Pets", new { id = record.PetId });
                 }
 
-                ModelState.AddModelError(string.Empty, error);
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
             }
 
             model.PetId = record.PetId;
@@ -142,11 +151,10 @@ namespace VetClinic.Controllers
                 return NotFound();
             }
 
-            var error = await _vaccinationService.DeleteAsync(CurrentUserId, id);
-            if (error != null)
+            var result = await _vaccinationService.DeleteAsync(CurrentUserId, id);
+            if (!result.Success)
             {
-                ModelState.AddModelError(string.Empty, error);
-                return View(record);
+                return this.HandleServiceError(result) ?? View(record);
             }
 
             TempData["SuccessMessage"] = "Aşı kaydı silindi.";

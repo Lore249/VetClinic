@@ -21,12 +21,12 @@ namespace VetClinic.Services
             return await _context.Clinics.AsNoTracking().FirstOrDefaultAsync();
         }
 
-        public async Task<string?> UpdateClinicAsync(ClinicViewModel model)
+        public async Task<ServiceResult<bool>> UpdateClinicAsync(ClinicViewModel model)
         {
             var clinic = await _context.Clinics.FirstOrDefaultAsync();
             if (clinic == null)
             {
-                return "Klinik kaydı bulunamadı.";
+                return ServiceResult<bool>.NotFound("Klinik kaydı bulunamadı.");
             }
 
             clinic.Name = model.Name.Trim();
@@ -34,7 +34,7 @@ namespace VetClinic.Services
             clinic.Phone = model.Phone.Trim();
 
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
         public async Task<List<ClinicWorkingHour>> GetWorkingHoursAsync()
@@ -47,14 +47,14 @@ namespace VetClinic.Services
                 .ToList();
         }
 
-        public async Task<string?> UpdateWorkingHoursAsync(List<WorkingHourRowViewModel> days)
+        public async Task<ServiceResult<bool>> UpdateWorkingHoursAsync(List<WorkingHourRowViewModel> days)
         {
             // Önce tüm günler kontrol edilir; bir gün hatalıysa hiçbir gün kaydedilmez.
             foreach (var day in days)
             {
                 if (!day.IsClosed && day.OpenTime >= day.CloseTime)
                 {
-                    return EnumTexts.ToTurkish(day.DayOfWeek) + ": açılış saati kapanış saatinden önce olmalıdır.";
+                    return ServiceResult<bool>.Validation(EnumTexts.ToTurkish(day.DayOfWeek) + ": açılış saati kapanış saatinden önce olmalıdır.");
                 }
             }
 
@@ -73,7 +73,7 @@ namespace VetClinic.Services
             }
 
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
     }
 }

@@ -44,14 +44,19 @@ namespace VetClinic.Areas.Admin.Controllers
         {
             if (ModelState.IsValid)
             {
-                var error = await _veterinarianService.CreateAsync(model);
-                if (error == null)
+                var result = await _veterinarianService.CreateAsync(model);
+                if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Hekim ve giriş hesabı oluşturuldu.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                ModelState.AddModelError(string.Empty, error);
+                // NotFound/Forbidden ise o sonuç döner; diğer hatalar ModelState'e eklenir ve form aşağıda yeniden gösterilir.
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
             }
 
             // Form hatayla geri gösterilirken onay kutularının seçenekleri yeniden doldurulur (formdan gelmezler).
@@ -87,14 +92,18 @@ namespace VetClinic.Areas.Admin.Controllers
         {
             if (ModelState.IsValid)
             {
-                var error = await _veterinarianService.UpdateAsync(model);
-                if (error == null)
+                var result = await _veterinarianService.UpdateAsync(model);
+                if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Hekim bilgileri güncellendi.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                ModelState.AddModelError(string.Empty, error);
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
             }
 
             await FillOptionsAsync(model);
@@ -118,9 +127,15 @@ namespace VetClinic.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var error = await _veterinarianService.DeleteAsync(id);
-            if (error != null)
+            var result = await _veterinarianService.DeleteAsync(id);
+            if (!result.Success)
             {
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
+
                 // Silinemediyse (örneğin randevusu varsa) onay sayfası hata mesajıyla yeniden gösterilir.
                 var veterinarian = await _veterinarianService.GetByIdAsync(id);
                 if (veterinarian == null)
@@ -128,7 +143,6 @@ namespace VetClinic.Areas.Admin.Controllers
                     return NotFound();
                 }
 
-                ModelState.AddModelError(string.Empty, error);
                 return View(veterinarian);
             }
 
@@ -165,14 +179,18 @@ namespace VetClinic.Areas.Admin.Controllers
         {
             if (ModelState.IsValid)
             {
-                var error = await _veterinarianService.AddAvailabilityAsync(model);
-                if (error == null)
+                var result = await _veterinarianService.AddAvailabilityAsync(model);
+                if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Müsaitlik aralığı eklendi.";
                     return RedirectToAction(nameof(Availability), new { id = model.VeterinarianId });
                 }
 
-                ModelState.AddModelError(string.Empty, error);
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
             }
 
             var veterinarian = await _veterinarianService.GetByIdAsync(model.VeterinarianId);
@@ -189,11 +207,12 @@ namespace VetClinic.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteAvailability(int veterinarianId, int availabilityId)
         {
-            var error = await _veterinarianService.DeleteAvailabilityAsync(veterinarianId, availabilityId);
-            if (error != null)
+            var result = await _veterinarianService.DeleteAvailabilityAsync(veterinarianId, availabilityId);
+            if (!result.Success)
             {
-                // Bu işlemde tek olası hata, aralığın (ya da hekimin) bulunamamasıdır.
-                return NotFound();
+                // Bu işlemde tek olası hata, aralığın bulunamamasıdır (404). Hatanın gösterileceği bir form olmadığı için
+                // eşleme null dönse bile 404 verilir.
+                return this.HandleServiceError(result) ?? NotFound();
             }
 
             TempData["SuccessMessage"] = "Müsaitlik aralığı silindi.";

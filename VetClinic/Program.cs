@@ -56,6 +56,7 @@ builder.Services.AddScoped<IServiceCatalogService, ServiceCatalogService>();
 builder.Services.AddScoped<IVeterinarianService, VeterinarianService>();
 builder.Services.AddScoped<IPetService, PetService>();
 builder.Services.AddScoped<IVaccinationService, VaccinationService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 var app = builder.Build();
 

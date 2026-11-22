@@ -38,11 +38,10 @@ namespace VetClinic.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var error = await _specialtyService.CreateAsync(model);
-            if (error != null)
+            var result = await _specialtyService.CreateAsync(model);
+            if (!result.Success)
             {
-                ModelState.AddModelError(string.Empty, error);
-                return View(model);
+                return this.HandleServiceError(result) ?? View(model);
             }
 
             TempData["SuccessMessage"] = "Uzmanlık eklendi.";
@@ -76,11 +75,10 @@ namespace VetClinic.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var error = await _specialtyService.UpdateAsync(model);
-            if (error != null)
+            var result = await _specialtyService.UpdateAsync(model);
+            if (!result.Success)
             {
-                ModelState.AddModelError(string.Empty, error);
-                return View(model);
+                return this.HandleServiceError(result) ?? View(model);
             }
 
             TempData["SuccessMessage"] = "Uzmanlık güncellendi.";
@@ -108,16 +106,22 @@ namespace VetClinic.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var error = await _specialtyService.DeleteAsync(id);
-            if (error != null)
+            var result = await _specialtyService.DeleteAsync(id);
+            if (!result.Success)
             {
+                // NotFound ise 404 döner; değilse hata ModelState'e eklenir ve onay sayfası yeniden gösterilir.
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
+
                 var specialty = await _specialtyService.GetByIdAsync(id);
                 if (specialty == null)
                 {
                     return NotFound();
                 }
 
-                ModelState.AddModelError(string.Empty, error);
                 return View(specialty);
             }
 

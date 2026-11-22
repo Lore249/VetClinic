@@ -5,17 +5,17 @@ namespace VetClinic.Services
 {
     // Klinikte verilen hizmetler (muayene, aşı vb.). Entity'nin adı Service olduğu için "ServiceService" yerine
     // "hizmet kataloğu" anlamında ServiceCatalogService adı verildi.
-    // Ekleme, güncelleme ve silme başarılıysa null, değilse kullanıcıya gösterilecek hata mesajını döner.
+    // Ekleme yeni kaydın id'sini, güncelleme ve silme bool döner; hepsi ServiceResult içinde.
     public interface IServiceCatalogService
     {
         Task<List<Service>> GetAllAsync();
 
         Task<Service?> GetByIdAsync(int id);
 
-        Task<string?> CreateAsync(ServiceFormViewModel model);
+        Task<ServiceResult<int>> CreateAsync(ServiceFormViewModel model);
 
-        Task<string?> UpdateAsync(ServiceFormViewModel model);
+        Task<ServiceResult<bool>> UpdateAsync(ServiceFormViewModel model);
 
-        Task<string?> DeleteAsync(int id);
+        Task<ServiceResult<bool>> DeleteAsync(int id);
     }
 }

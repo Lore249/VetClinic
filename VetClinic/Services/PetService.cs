@@ -42,13 +42,13 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(p => p.Id == petId && p.OwnerId == ownerId);
         }
 
-        public async Task<string?> CreateAsync(string ownerId, PetFormViewModel model)
+        public async Task<ServiceResult<int>> CreateAsync(string ownerId, PetFormViewModel model)
         {
             // Yeni kayıtta karşılaştırmadan hariç tutulacak kayıt yok (0). Formdan gelen Id kullanılmaz.
             var error = await ValidateAsync(ownerId, model, 0);
             if (error != null)
             {
-                return error;
+                return ServiceResult<int>.Validation(error);
             }
 
             // BirthDate ve WeightKg nullable; controller ModelState.IsValid ([Required]) kontrolünden sonra çağırdığı için doludur.
@@ -69,21 +69,21 @@ namespace VetClinic.Services
 
             _context.Pets.Add(pet);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<int>.Ok(pet.Id);
         }
 
-        public async Task<string?> UpdateAsync(string ownerId, PetFormViewModel model)
+        public async Task<ServiceResult<bool>> UpdateAsync(string ownerId, PetFormViewModel model)
         {
             var pet = await _context.Pets.FirstOrDefaultAsync(p => p.Id == model.Id && p.OwnerId == ownerId);
             if (pet == null)
             {
-                return "Hayvan bulunamadı.";
+                return ServiceResult<bool>.NotFound("Hayvan bulunamadı.");
             }
 
             var error = await ValidateAsync(ownerId, model, pet.Id);
             if (error != null)
             {
-                return error;
+                return ServiceResult<bool>.Validation(error);
             }
 
             pet.Name = model.Name.Trim();
@@ -111,21 +111,21 @@ namespace VetClinic.Services
                 DeletePhotoFile(oldPhotoPath);
             }
 
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        public async Task<string?> DeleteAsync(string ownerId, int petId)
+        public async Task<ServiceResult<bool>> DeleteAsync(string ownerId, int petId)
         {
             var pet = await _context.Pets.FirstOrDefaultAsync(p => p.Id == petId && p.OwnerId == ownerId);
             if (pet == null)
             {
-                return "Hayvan bulunamadı.";
+                return ServiceResult<bool>.NotFound("Hayvan bulunamadı.");
             }
 
             // İlişki Restrict olduğu için randevusu olan hayvan silinmeye çalışılırsa veritabanı hata verir; önce kontrol edilir.
             if (await _context.Appointments.AnyAsync(a => a.PetId == petId))
             {
-                return "Bu hayvanın randevuları olduğu için silinemez. Geçmiş randevular ve muayene notları hayvan bilgisiyle birlikte saklanmalıdır.";
+                return ServiceResult<bool>.Validation("Bu hayvanın randevuları olduğu için silinemez. Geçmiş randevular ve muayene notları hayvan bilgisiyle birlikte saklanmalıdır.");
             }
 
             // Aşı kayıtları veritabanında Cascade ile hayvanla birlikte silinir.
@@ -133,10 +133,11 @@ namespace VetClinic.Services
             await _context.SaveChangesAsync();
 
             DeletePhotoFile(pet.PhotoPath);
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        // Ekleme ve güncellemede ortak kurallar. excludedPetId: düzenlemede kaydın kendisi ad karşılaştırmasına girmesin.
+        // Ekleme ve güncellemede ortak kurallar (hepsi Validation türünde). Kurallara uyuyorsa null, değilse hata mesajı döner;
+        // çağıran metot mesajı ServiceResult'a çevirir. excludedPetId: düzenlemede kaydın kendisi ad karşılaştırmasına girmesin.
         private async Task<string?> ValidateAsync(string ownerId, PetFormViewModel model, int excludedPetId)
         {
             var today = DateOnly.FromDateTime(DateTime.Today);

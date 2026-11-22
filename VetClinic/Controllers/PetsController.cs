@@ -52,14 +52,19 @@ namespace VetClinic.Controllers
         {
             if (ModelState.IsValid)
             {
-                var error = await _petService.CreateAsync(CurrentUserId, model);
-                if (error == null)
+                var result = await _petService.CreateAsync(CurrentUserId, model);
+                if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Hayvan kaydedildi.";
                     return RedirectToAction(nameof(Index));
                 }
 
-                ModelState.AddModelError(string.Empty, error);
+                // NotFound/Forbidden ise o sonuç döner; diğer hatalar ModelState'e eklenir ve form yeniden gösterilir.
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
             }
 
             return View(model);
@@ -101,14 +106,18 @@ namespace VetClinic.Controllers
 
             if (ModelState.IsValid)
             {
-                var error = await _petService.UpdateAsync(CurrentUserId, model);
-                if (error == null)
+                var result = await _petService.UpdateAsync(CurrentUserId, model);
+                if (result.Success)
                 {
                     TempData["SuccessMessage"] = "Hayvan bilgileri güncellendi.";
                     return RedirectToAction(nameof(Details), new { id = model.Id });
                 }
 
-                ModelState.AddModelError(string.Empty, error);
+                var errorResult = this.HandleServiceError(result);
+                if (errorResult != null)
+                {
+                    return errorResult;
+                }
             }
 
             model.ExistingPhotoPath = pet.PhotoPath;
@@ -138,12 +147,11 @@ namespace VetClinic.Controllers
                 return NotFound();
             }
 
-            var error = await _petService.DeleteAsync(CurrentUserId, id);
-            if (error != null)
+            var result = await _petService.DeleteAsync(CurrentUserId, id);
+            if (!result.Success)
             {
                 // Randevusu olan hayvan silinemez; onay sayfası hata mesajıyla yeniden gösterilir.
-                ModelState.AddModelError(string.Empty, error);
-                return View(pet);
+                return this.HandleServiceError(result) ?? View(pet);
             }
 
             TempData["SuccessMessage"] = "Hayvan ve aşı kayıtları silindi.";

@@ -35,52 +35,53 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
-        public async Task<string?> CreateAsync(SpecialtyFormViewModel model)
+        public async Task<ServiceResult<int>> CreateAsync(SpecialtyFormViewModel model)
         {
             var name = model.Name.Trim();
 
             if (await NameExistsAsync(name, 0))
             {
-                return "Bu adla bir uzmanlık zaten var.";
+                return ServiceResult<int>.Validation("Bu adla bir uzmanlık zaten var.");
             }
 
-            _context.Specialties.Add(new Specialty { Name = name });
+            var specialty = new Specialty { Name = name };
+            _context.Specialties.Add(specialty);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<int>.Ok(specialty.Id);
         }
 
-        public async Task<string?> UpdateAsync(SpecialtyFormViewModel model)
+        public async Task<ServiceResult<bool>> UpdateAsync(SpecialtyFormViewModel model)
         {
             var specialty = await _context.Specialties.FindAsync(model.Id);
             if (specialty == null)
             {
-                return "Uzmanlık bulunamadı.";
+                return ServiceResult<bool>.NotFound("Uzmanlık bulunamadı.");
             }
 
             var name = model.Name.Trim();
 
             if (await NameExistsAsync(name, model.Id))
             {
-                return "Bu adla bir uzmanlık zaten var.";
+                return ServiceResult<bool>.Validation("Bu adla bir uzmanlık zaten var.");
             }
 
             specialty.Name = name;
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        public async Task<string?> DeleteAsync(int id)
+        public async Task<ServiceResult<bool>> DeleteAsync(int id)
         {
             var specialty = await _context.Specialties.FindAsync(id);
             if (specialty == null)
             {
-                return "Uzmanlık bulunamadı.";
+                return ServiceResult<bool>.NotFound("Uzmanlık bulunamadı.");
             }
 
             // Hekimlerle olan bağlar (VeterinarianSpecialties satırları) veritabanında Cascade ile silinir; hekimlere dokunulmaz.
             _context.Specialties.Remove(specialty);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
         // Aynı adlı iki uzmanlık, hekim formunda hangisinin seçildiğini belirsizleştirir.

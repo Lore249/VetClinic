@@ -31,13 +31,13 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
-        public async Task<string?> CreateAsync(ServiceFormViewModel model)
+        public async Task<ServiceResult<int>> CreateAsync(ServiceFormViewModel model)
         {
             var name = model.Name.Trim();
 
             if (await NameExistsAsync(name, 0))
             {
-                return "Bu adla bir hizmet zaten var.";
+                return ServiceResult<int>.Validation("Bu adla bir hizmet zaten var.");
             }
 
             var service = new Service
@@ -51,22 +51,22 @@ namespace VetClinic.Services
 
             _context.Services.Add(service);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<int>.Ok(service.Id);
         }
 
-        public async Task<string?> UpdateAsync(ServiceFormViewModel model)
+        public async Task<ServiceResult<bool>> UpdateAsync(ServiceFormViewModel model)
         {
             var service = await _context.Services.FindAsync(model.Id);
             if (service == null)
             {
-                return "Hizmet bulunamadı.";
+                return ServiceResult<bool>.NotFound("Hizmet bulunamadı.");
             }
 
             var name = model.Name.Trim();
 
             if (await NameExistsAsync(name, model.Id))
             {
-                return "Bu adla bir hizmet zaten var.";
+                return ServiceResult<bool>.Validation("Bu adla bir hizmet zaten var.");
             }
 
             // Süre ve ücret değişse de eski randevular etkilenmez: randevu, alındığı andaki değerlerin kopyasını saklar.
@@ -77,28 +77,28 @@ namespace VetClinic.Services
             service.IsActive = model.IsActive;
 
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        public async Task<string?> DeleteAsync(int id)
+        public async Task<ServiceResult<bool>> DeleteAsync(int id)
         {
             var service = await _context.Services.FindAsync(id);
             if (service == null)
             {
-                return "Hizmet bulunamadı.";
+                return ServiceResult<bool>.NotFound("Hizmet bulunamadı.");
             }
 
             // İlişki Restrict olduğu için randevusu olan hizmet silinmeye çalışılırsa veritabanı hata verir.
             // Bu yüzden önce kontrol edilir ve kullanıcıya ne yapabileceği söylenir.
             if (await _context.Appointments.AnyAsync(a => a.ServiceId == id))
             {
-                return "Bu hizmete ait randevular olduğu için silinemez. Yeni randevularda görünmemesi için hizmeti düzenleyip pasif yapabilirsiniz.";
+                return ServiceResult<bool>.Validation("Bu hizmete ait randevular olduğu için silinemez. Yeni randevularda görünmemesi için hizmeti düzenleyip pasif yapabilirsiniz.");
             }
 
             // Hekimlerle olan bağlar (VeterinarianServices satırları) veritabanında Cascade ile silinir.
             _context.Services.Remove(service);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
         // Aynı adlı iki hizmet, randevu formunda hangisinin seçildiğini belirsizleştirir.

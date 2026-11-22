@@ -23,44 +23,45 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(r => r.Id == recordId && r.Pet.OwnerId == ownerId);
         }
 
-        public async Task<string?> CreateAsync(string ownerId, VaccinationFormViewModel model)
+        public async Task<ServiceResult<int>> CreateAsync(string ownerId, VaccinationFormViewModel model)
         {
             // PetId formdan geldiği için hayvanın bu kullanıcıya ait olduğu ayrıca kontrol edilir.
             if (!await _context.Pets.AnyAsync(p => p.Id == model.PetId && p.OwnerId == ownerId))
             {
-                return "Hayvan bulunamadı.";
+                return ServiceResult<int>.NotFound("Hayvan bulunamadı.");
             }
 
             var error = ValidateDates(model);
             if (error != null)
             {
-                return error;
+                return ServiceResult<int>.Validation(error);
             }
 
-            _context.VaccinationRecords.Add(new VaccinationRecord
+            var record = new VaccinationRecord
             {
                 PetId = model.PetId,
                 VaccineName = model.VaccineName.Trim(),
                 AdministeredOn = model.AdministeredOn,
                 NextDoseOn = model.NextDoseOn
-            });
+            };
+            _context.VaccinationRecords.Add(record);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<int>.Ok(record.Id);
         }
 
-        public async Task<string?> UpdateAsync(string ownerId, VaccinationFormViewModel model)
+        public async Task<ServiceResult<bool>> UpdateAsync(string ownerId, VaccinationFormViewModel model)
         {
             var record = await _context.VaccinationRecords
                 .FirstOrDefaultAsync(r => r.Id == model.Id && r.Pet.OwnerId == ownerId);
             if (record == null)
             {
-                return "Aşı kaydı bulunamadı.";
+                return ServiceResult<bool>.NotFound("Aşı kaydı bulunamadı.");
             }
 
             var error = ValidateDates(model);
             if (error != null)
             {
-                return error;
+                return ServiceResult<bool>.Validation(error);
             }
 
             // Kaydın hangi hayvana ait olduğu değiştirilmez; formdan gelen PetId burada kullanılmaz.
@@ -69,24 +70,24 @@ namespace VetClinic.Services
             record.NextDoseOn = model.NextDoseOn;
 
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        public async Task<string?> DeleteAsync(string ownerId, int recordId)
+        public async Task<ServiceResult<bool>> DeleteAsync(string ownerId, int recordId)
         {
             var record = await _context.VaccinationRecords
                 .FirstOrDefaultAsync(r => r.Id == recordId && r.Pet.OwnerId == ownerId);
             if (record == null)
             {
-                return "Aşı kaydı bulunamadı.";
+                return ServiceResult<bool>.NotFound("Aşı kaydı bulunamadı.");
             }
 
             _context.VaccinationRecords.Remove(record);
             await _context.SaveChangesAsync();
-            return null;
+            return ServiceResult<bool>.Ok(true);
         }
 
-        // Ekleme ve güncellemede ortak tarih kuralları.
+        // Ekleme ve güncellemede ortak tarih kuralları (Validation türünde). Uygunsa null, değilse hata mesajı döner.
         private static string? ValidateDates(VaccinationFormViewModel model)
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
