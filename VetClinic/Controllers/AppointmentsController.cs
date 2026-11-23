@@ -2,78 +2,68 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VetClinic.Helpers;
+using VetClinic.Models.Entities;
 using VetClinic.Models.ViewModels;
 using VetClinic.Services;
 
 namespace VetClinic.Controllers
 {
-    // Üyenin randevu işlemleri. Bütün kurallar IAppointmentService'te; controller yalnızca formu alır ve sonucu gösterir.
+    // Üyenin randevu işlemleri. Bütün kurallar IAppointmentService'te; controller yalnızca girdiyi alır ve sonucu gösterir.
     [Authorize(Roles = AppRoles.Member)]
     public class AppointmentsController : Controller
     {
         private readonly IAppointmentService _appointmentService;
         private readonly IPetService _petService;
         private readonly IServiceCatalogService _serviceCatalog;
-        private readonly IVeterinarianService _veterinarianService;
 
         public AppointmentsController(IAppointmentService appointmentService, IPetService petService,
-            IServiceCatalogService serviceCatalog, IVeterinarianService veterinarianService)
+            IServiceCatalogService serviceCatalog)
         {
             _appointmentService = appointmentService;
             _petService = petService;
             _serviceCatalog = serviceCatalog;
-            _veterinarianService = veterinarianService;
         }
 
         // Kullanıcı id'si her zaman oturumdaki kimlikten okunur.
         private string CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        // Boş saatler: /Appointments/Slots?serviceId=1&date=2026-11-23 (GET formu; bir şey değiştirmediği için POST değil).
-        [HttpGet]
-        public async Task<IActionResult> Slots(AppointmentSlotsViewModel model)
+        // Randevularım
+        public async Task<IActionResult> Index()
         {
-            model.ServiceOptions = await _serviceCatalog.GetAllAsync();
-
-            if (model.Date == null)
-            {
-                model.Date = DateOnly.FromDateTime(DateTime.Today);
-            }
-
-            if (model.ServiceId != null)
-            {
-                var result = await _appointmentService.GetAvailableSlotsAsync(model.ServiceId.Value, model.Date.Value);
-                if (result.Success)
-                {
-                    model.Slots = result.Data;
-                }
-                else
-                {
-                    var errorResult = this.HandleServiceError(result);
-                    if (errorResult != null)
-                    {
-                        return errorResult;
-                    }
-                }
-            }
-
-            return View(model);
+            var appointments = await _appointmentService.GetMyAppointmentsAsync(CurrentUserId);
+            return View(appointments);
         }
 
-        // Boş saatler sayfasındaki bir saate tıklanınca hizmet, hekim ve başlangıç adresten gelir ve form dolu açılır.
+        public async Task<IActionResult> Details(int id)
+        {
+            // Başkasının randevusunun id'si yazılırsa servis null döner ve 404 gösterilir.
+            var appointment = await _appointmentService.GetMyAppointmentAsync(CurrentUserId, id);
+            if (appointment == null)
+            {
+                return NotFound();
+            }
+
+            return View(BuildDetails(appointment));
+        }
+
+        // 1. adım (GET): /Appointments/Create?PetId=1&ServiceId=2&Date=2026-11-24
+        // Hizmet ve tarih seçilmişse o günün boş saatleri sunucuda hesaplanıp sayfayla birlikte gönderilir.
         [HttpGet]
-        public async Task<IActionResult> Create(int? serviceId, int? veterinarianId, DateTime? startTime)
+        public async Task<IActionResult> Create(int? petId, int? serviceId, DateOnly? date)
         {
             var model = new AppointmentCreateViewModel
             {
+                PetId = petId,
                 ServiceId = serviceId,
-                VeterinarianId = veterinarianId,
-                StartTime = startTime
+                Date = date ?? DateOnly.FromDateTime(DateTime.Today)
             };
 
-            await FillOptionsAsync(model);
-            return View(model);
+            // FillPageAsync null dönerse sayfa gösterilir; değilse (ör. olmayan bir hizmet için 404) o sonuç döner.
+            return await FillPageAsync(model) ?? View(model);
         }
 
+        // 2. adım (POST): bir saat düğmesine tıklanınca. Hayvan, hizmet ve tarih formdaki gizli alanlardan;
+        // hekim ve başlangıç saati düğmenin formaction adresindeki sorgu dizesinden gelir. Model binding ikisini de okur.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(AppointmentCreateViewModel model)
@@ -86,11 +76,11 @@ namespace VetClinic.Controllers
 
                 if (result.Success)
                 {
-                    TempData["SuccessMessage"] = $"Randevu oluşturuldu ve onay bekliyor (randevu no: {result.Data}).";
-                    return RedirectToAction(nameof(Create));
+                    TempData["SuccessMessage"] = "Randevunuz oluşturuldu ve onay bekliyor.";
+                    return RedirectToAction(nameof(Details), new { id = result.Data });
                 }
 
-                // Eşleme tablosu: NotFound -> 404; Validation ve Conflict -> formda hata mesajı.
+                // Eşleme tablosu: NotFound -> 404; Validation ve Conflict -> sayfada hata mesajı.
                 var errorResult = this.HandleServiceError(result);
                 if (errorResult != null)
                 {
@@ -98,17 +88,68 @@ namespace VetClinic.Controllers
                 }
             }
 
-            await FillOptionsAsync(model);
-            return View(model);
+            // Hata varsa (ör. saat bu arada başkası tarafından alındıysa) aynı arama yeniden gösterilir;
+            // boş saatler güncel hâliyle yeniden hesaplandığı için dolan saat listeden kalkar.
+            return await FillPageAsync(model) ?? View(model);
         }
 
-        // Bu sade form kuralları denemek içindir: pasif hizmetler ve hizmeti vermeyen hekimler de bilerek seçilebilir,
-        // böylece servisin bu durumlarda verdiği hata görülebilir.
-        private async Task FillOptionsAsync(AppointmentCreateViewModel model)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            // Bu controller'a yalnızca Üye girebildiği için rol sabittir; sahiplik ve iptal kuralını servis kendisi kontrol eder.
+            var result = await _appointmentService.CancelAsync(id, CurrentUserId, AppRoles.Member);
+            if (result.Success)
+            {
+                TempData["SuccessMessage"] = "Randevu iptal edildi.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            var errorResult = this.HandleServiceError(result);
+            if (errorResult != null)
+            {
+                return errorResult;
+            }
+
+            // İptal kuralına takıldıysa (ör. başlangıç saati geçmişse) detay sayfası hata mesajıyla gösterilir.
+            var appointment = await _appointmentService.GetMyAppointmentAsync(CurrentUserId, id);
+            if (appointment == null)
+            {
+                return NotFound();
+            }
+
+            return View(nameof(Details), BuildDetails(appointment));
+        }
+
+        // Randevu ekranının seçeneklerini ve (hizmet ile tarih seçiliyse) boş saatleri doldurur.
+        // Boş saatler alınamazsa eşleme sonucunu döner (olmayan hizmet için 404); null dönerse sayfa gösterilebilir.
+        private async Task<IActionResult?> FillPageAsync(AppointmentCreateViewModel model)
         {
             model.PetOptions = await _petService.GetMyPetsAsync(CurrentUserId);
-            model.ServiceOptions = await _serviceCatalog.GetAllAsync();
-            model.VeterinarianOptions = await _veterinarianService.GetAllAsync();
+            model.ServiceOptions = await _serviceCatalog.GetActiveAsync();
+
+            if (model.ServiceId == null || model.Date == null)
+            {
+                return null;
+            }
+
+            var result = await _appointmentService.GetAvailableSlotsAsync(model.ServiceId.Value, model.Date.Value);
+            if (result.Success)
+            {
+                model.Slots = result.Data;
+                return null;
+            }
+
+            return this.HandleServiceError(result);
+        }
+
+        private AppointmentDetailsViewModel BuildDetails(Appointment appointment)
+        {
+            return new AppointmentDetailsViewModel
+            {
+                Appointment = appointment,
+                CanCancel = _appointmentService.CanCancel(appointment)
+            };
         }
     }
 }

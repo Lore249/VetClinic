@@ -24,6 +24,15 @@ namespace VetClinic.Services
                 .ToListAsync();
         }
 
+        public async Task<List<Service>> GetActiveAsync()
+        {
+            return await _context.Services
+                .AsNoTracking()
+                .Where(s => s.IsActive)
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+        }
+
         public async Task<Service?> GetByIdAsync(int id)
         {
             return await _context.Services

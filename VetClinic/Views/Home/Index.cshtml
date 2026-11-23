@@ -10,11 +10,16 @@
                 Serdivan'da kedi, köpek, kuş ve tavşan dostlarımız için muayene, aşı ve bakım hizmetleri.
                 Randevunuzu çevrim içi alın, hayvanlarınızın aşı takvimini tek yerden takip edin.
             </p>
-            @* Giriş yapmış üyeler için randevu bağlantısı, randevu ekranı yazıldığında (Gün 7) eklenecek. *@
+            @* Ziyaretçi randevu için önce üye olur; giriş yapmış üye doğrudan randevu ekranına gider. *@
             @if (User.Identity?.IsAuthenticated != true)
             {
                 <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-lg me-2">Randevu Al</a>
                 <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary btn-lg">Giriş Yap</a>
+            }
+            else if (User.IsInRole(AppRoles.Member))
+            {
+                <a asp-controller="Appointments" asp-action="Create" class="btn btn-primary btn-lg me-2">Randevu Al</a>
+                <a asp-controller="Appointments" asp-action="Index" class="btn btn-outline-primary btn-lg">Randevularım</a>
             }
         </div>
     </div>

@@ -1,0 +1,34 @@
+@model List<Appointment>
+@* Randevularım sayfasındaki iki tablo (yaklaşan ve geçmiş) aynı sütunları kullandığı için ortak partial. *@
+
+<div class="table-responsive">
+    <table class="table align-middle mb-0">
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Saat</th>
+                <th>Hayvan</th>
+                <th>Hizmet</th>
+                <th>Veteriner</th>
+                <th>Durum</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var appointment in Model)
+            {
+                <tr>
+                    <td class="text-nowrap">@appointment.StartTime.ToString("dd.MM.yyyy ddd")</td>
+                    <td class="text-nowrap">@appointment.StartTime.ToString("HH:mm")-@appointment.EndTime.ToString("HH:mm")</td>
+                    <td>@appointment.Pet.Name</td>
+                    <td>@appointment.Service.Name</td>
+                    <td>@appointment.Veterinarian.Title @appointment.Veterinarian.User.FullName</td>
+                    <td><partial name="_AppointmentStatusBadge" model="appointment.Status" /></td>
+                    <td class="text-end">
+                        <a asp-action="Details" asp-route-id="@appointment.Id" class="btn btn-outline-primary btn-sm">Detay</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

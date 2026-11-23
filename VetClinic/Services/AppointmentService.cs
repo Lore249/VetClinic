@@ -167,6 +167,98 @@ namespace VetClinic.Services
             return ServiceResult<int>.Ok(appointment.Id);
         }
 
+        public async Task<List<Appointment>> GetMyAppointmentsAsync(string ownerUserId)
+        {
+            // Randevuda sahip bilgisi yok; hayvan üzerinden (a.Pet.OwnerId) filtrelenir.
+            return await _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Pet)
+                .Include(a => a.Service)
+                .Include(a => a.Veterinarian)
+                    .ThenInclude(v => v.User)
+                .Where(a => a.Pet.OwnerId == ownerUserId)
+                .OrderByDescending(a => a.StartTime)
+                .ToListAsync();
+        }
+
+        public async Task<Appointment?> GetMyAppointmentAsync(string ownerUserId, int appointmentId)
+        {
+            // Başkasının randevusunun id'si yazılırsa null döner (controller 404 gösterir); kaydın var olduğu bilgisi sızmaz.
+            return await _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Pet)
+                .Include(a => a.Service)
+                .Include(a => a.Veterinarian)
+                    .ThenInclude(v => v.User)
+                .FirstOrDefaultAsync(a => a.Id == appointmentId && a.Pet.OwnerId == ownerUserId);
+        }
+
+        public bool CanCancel(Appointment appointment)
+        {
+            return CheckCancelRules(appointment, DateTime.Now).Success;
+        }
+
+        public async Task<ServiceResult<bool>> CancelAsync(int appointmentId, string userId, string userRole)
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Pet)
+                .Include(a => a.Veterinarian)
+                .FirstOrDefaultAsync(a => a.Id == appointmentId);
+
+            // Kaydı göremeyen kullanıcıya (başkasının randevusu) "bulunamadı" denir.
+            if (appointment == null || !CanView(appointment, userId, userRole))
+            {
+                return ServiceResult<bool>.NotFound("Randevu bulunamadı.");
+            }
+
+            // Hekim kendi randevusunu görebilir ama iptal edemez: kayıt görünüyor, işlem yetkisi yok (Forbidden).
+            if (userRole != AppRoles.Member && userRole != AppRoles.Admin)
+            {
+                return ServiceResult<bool>.Forbidden("Randevuyu yalnızca hayvanın sahibi ya da yönetici iptal edebilir.");
+            }
+
+            var check = CheckCancelRules(appointment, DateTime.Now);
+            if (!check.Success)
+            {
+                return check;
+            }
+
+            appointment.Status = AppointmentStatus.Cancelled;
+            await _context.SaveChangesAsync();
+            return ServiceResult<bool>.Ok(true);
+        }
+
+        // İptal kuralı tek yerde: yalnızca Bekliyor ya da Onaylandı durumundaki, başlangıcı gelmemiş randevu iptal edilir.
+        // Geçersiz durum geçişi ve zaman kuralı ihlali Validation'dır (Conflict yalnızca zaman çakışmaları içindir).
+        private static ServiceResult<bool> CheckCancelRules(Appointment appointment, DateTime now)
+        {
+            if (appointment.Status != AppointmentStatus.Pending && appointment.Status != AppointmentStatus.Approved)
+            {
+                return ServiceResult<bool>.Validation(
+                    $"\"{EnumTexts.ToTurkish(appointment.Status)}\" durumundaki randevu iptal edilemez.");
+            }
+
+            if (appointment.StartTime <= now)
+            {
+                return ServiceResult<bool>.Validation("Başlangıç saati geçmiş randevu iptal edilemez.");
+            }
+
+            return ServiceResult<bool>.Ok(true);
+        }
+
+        // Kaydı görebilme kuralı: Admin tüm randevuları, Üye yalnızca kendi hayvanlarının, Veteriner yalnızca kendi randevularını görür.
+        // Durum değiştiren her işlem önce buna bakar. Pet ve Veterinarian yüklenmiş olmalıdır.
+        private static bool CanView(Appointment appointment, string userId, string userRole)
+        {
+            return userRole switch
+            {
+                AppRoles.Admin => true,
+                AppRoles.Member => appointment.Pet.OwnerId == userId,
+                AppRoles.Veterinarian => appointment.Veterinarian.UserId == userId,
+                _ => false
+            };
+        }
+
         // Ortak kontrol metodu: 3-6 numaralı kurallar yalnızca burada yazılır.
         // Veritabanına gitmez; gereken her şey parametre olarak gelir. GetAvailableSlotsAsync bunu her aday saat için,
         // CreateAsync tek bir aralık için çağırır. "now" da parametredir ki tüm adaylar aynı ana göre denensin.

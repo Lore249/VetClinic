@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using VetClinic.Models.Dtos;
 using VetClinic.Models.Entities;
 
 namespace VetClinic.Models.ViewModels
 {
-    // Randevu oluşturma formu. Bitiş saati, süre ve ücret formda yoktur: servis bunları hizmetten hesaplar.
+    // Randevu alma ekranı. 1. adımda hayvan, hizmet ve tarih seçilir (GET formu); 2. adımda boş saatlerden birine tıklanır
+    // ve hekim ile başlangıç saati, tıklanan düğmenin adresinden gelir (POST).
+    // Bitiş saati, süre ve ücret formda yoktur: servis bunları hizmetten hesaplar.
     // Alanlar nullable: seçim kutuları "Seçin" ile boş açılır, boş gönderilirse [Required] mesajı çıkar.
     public class AppointmentCreateViewModel
     {
@@ -16,22 +19,26 @@ namespace VetClinic.Models.ViewModels
         [Display(Name = "Hizmet")]
         public int? ServiceId { get; set; }
 
-        [Required(ErrorMessage = "Veteriner seçin.")]
-        [Display(Name = "Veteriner")]
+        [Required(ErrorMessage = "Tarih seçin.")]
+        [Display(Name = "Tarih")]
+        public DateOnly? Date { get; set; }
+
+        // Bu ikisi tıklanan saat düğmesinden gelir; normal kullanımda hiçbir zaman boş olmaz.
+        [Required(ErrorMessage = "Hekim seçilmedi; boş saatlerden birine tıklayın.")]
         public int? VeterinarianId { get; set; }
 
-        [Required(ErrorMessage = "Başlangıç tarihi ve saati zorunludur.")]
-        [Display(Name = "Başlangıç")]
+        [Required(ErrorMessage = "Saat seçilmedi; boş saatlerden birine tıklayın.")]
         public DateTime? StartTime { get; set; }
 
-        // Seçim kutularının seçenekleri; controller doldurur, formdan alınmaz.
+        // Yalnızca görüntüleme için; controller doldurur, formdan alınmaz.
         [BindNever]
         public List<Pet> PetOptions { get; set; } = new List<Pet>();
 
         [BindNever]
         public List<Service> ServiceOptions { get; set; } = new List<Service>();
 
+        // null: henüz arama yapılmadı. Boş liste: arandı ama uygun saat yok.
         [BindNever]
-        public List<Veterinarian> VeterinarianOptions { get; set; } = new List<Veterinarian>();
+        public List<VeterinarianSlotsDto>? Slots { get; set; }
     }
 }

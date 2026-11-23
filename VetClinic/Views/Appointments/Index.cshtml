@@ -1,0 +1,42 @@
+@model List<Appointment>
+@{
+    ViewData["Title"] = "Randevularım";
+
+    // Yaklaşanlar en yakından uzağa, geçmişler en yeniden eskiye sıralanır.
+    var now = DateTime.Now;
+    var upcoming = Model.Where(a => a.StartTime > now).OrderBy(a => a.StartTime).ToList();
+    var past = Model.Where(a => a.StartTime <= now).OrderByDescending(a => a.StartTime).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Randevularım</h1>
+    <a asp-action="Create" class="btn btn-primary">Randevu Al</a>
+</div>
+
+<div class="card kk-card mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Yaklaşan randevular</h2>
+        @if (upcoming.Count == 0)
+        {
+            <p class="text-muted mb-0">Yaklaşan randevunuz yok.</p>
+        }
+        else
+        {
+            <partial name="_AppointmentTable" model="upcoming" />
+        }
+    </div>
+</div>
+
+<div class="card kk-card">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Geçmiş randevular</h2>
+        @if (past.Count == 0)
+        {
+            <p class="text-muted mb-0">Geçmiş randevunuz yok.</p>
+        }
+        else
+        {
+            <partial name="_AppointmentTable" model="past" />
+        }
+    </div>
+</div>

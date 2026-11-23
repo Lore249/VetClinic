@@ -1,22 +1,31 @@
 @model AppointmentCreateViewModel
 @{
     ViewData["Title"] = "Randevu Al";
+
+    // Seçilen hayvan ve hizmet, boş saatlerin üstündeki özet satırında gösterilir.
+    var selectedPet = Model.PetOptions.FirstOrDefault(p => p.Id == Model.PetId);
+    var selectedService = Model.ServiceOptions.FirstOrDefault(s => s.Id == Model.ServiceId);
 }
 
 <h1 class="h3 mb-1">Randevu Al</h1>
 <p class="text-muted mb-3">
-    Hayvanı, hizmeti, hekimi ve başlangıç saatini seçin. Uygun saatleri görmek için <a asp-action="Slots">Boş Saatler</a> sayfasını kullanabilirsiniz.
+    Hayvanı, hizmeti ve tarihi seçip boş saatleri listeleyin, ardından uygun saate tıklayın.
     Randevu "Bekliyor" durumunda oluşur; hekim ya da yönetici onaylar.
 </p>
 
-<div class="card kk-card">
-    <div class="card-body p-4">
-        <form asp-action="Create" method="post">
-            @* Servisin kural ihlali ve çakışma mesajları burada görünür. *@
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-            <div class="row">
-                <div class="col-sm-6 mb-3">
+@if (Model.PetOptions.Count == 0)
+{
+    <div class="alert alert-info">
+        Randevu alabilmek için önce <a asp-controller="Pets" asp-action="Create">hayvanınızı kaydedin</a>.
+    </div>
+}
+else
+{
+    <div class="card kk-card mb-4">
+        <div class="card-body p-4">
+            @* 1. adım: GET formu. Değerler adres çubuğuna yazılır; hiçbir şey kaydedilmediği için POST değildir. *@
+            <form asp-action="Create" method="get" class="row g-3 align-items-start">
+                <div class="col-md-4">
                     <label asp-for="PetId" class="form-label"></label>
                     <select asp-for="PetId" class="form-select">
                         <option value="">Seçin</option>
@@ -27,44 +36,56 @@
                     </select>
                     <span asp-validation-for="PetId" class="text-danger"></span>
                 </div>
-                <div class="col-sm-6 mb-3">
+                <div class="col-md-4">
                     <label asp-for="ServiceId" class="form-label"></label>
                     <select asp-for="ServiceId" class="form-select">
                         <option value="">Seçin</option>
                         @foreach (var service in Model.ServiceOptions)
                         {
-                            <option value="@service.Id">@service.Name (@service.DurationMinutes dk, @service.Price.ToString("N2") ₺)@(service.IsActive ? "" : " - pasif")</option>
+                            <option value="@service.Id">@service.Name (@service.DurationMinutes dk, @service.Price.ToString("N2") ₺)</option>
                         }
                     </select>
                     <span asp-validation-for="ServiceId" class="text-danger"></span>
                 </div>
-            </div>
-
-            <div class="row">
-                <div class="col-sm-6 mb-3">
-                    <label asp-for="VeterinarianId" class="form-label"></label>
-                    <select asp-for="VeterinarianId" class="form-select">
-                        <option value="">Seçin</option>
-                        @foreach (var veterinarian in Model.VeterinarianOptions)
-                        {
-                            @* Hekimin verdiği hizmetler de yazılır: "hekim bu hizmeti vermiyor" kuralı denenebilsin. *@
-                            <option value="@veterinarian.Id">@veterinarian.Title @veterinarian.User.FullName (@string.Join(", ", veterinarian.Services.Select(s => s.Name)))</option>
-                        }
-                    </select>
-                    <span asp-validation-for="VeterinarianId" class="text-danger"></span>
+                <div class="col-md-2">
+                    <label asp-for="Date" class="form-label"></label>
+                    <input asp-for="Date" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" />
+                    <span asp-validation-for="Date" class="text-danger"></span>
                 </div>
-                <div class="col-sm-6 mb-3">
-                    <label asp-for="StartTime" class="form-label"></label>
-                    @* datetime-local kutusu değeri 2026-11-23T09:00 biçiminde bekler ve gönderir; saniye gösterilmesin diye biçim verildi. *@
-                    <input asp-for="StartTime" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
-                    <span asp-validation-for="StartTime" class="text-danger"></span>
+                <div class="col-md-2">
+                    <label class="form-label d-none d-md-block">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Boş Saatleri Göster</button>
                 </div>
-            </div>
-
-            <button type="submit" class="btn btn-primary">Randevu Oluştur</button>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
+
+    @* Servisin kural ihlali ve çakışma mesajları (ör. "Hekimin 10:00-10:30 arasında başka bir randevusu var.") burada görünür. *@
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <span asp-validation-for="VeterinarianId" class="text-danger d-block"></span>
+    <span asp-validation-for="StartTime" class="text-danger d-block"></span>
+
+    @if (Model.Slots != null && selectedService != null)
+    {
+        <h2 class="h5 mb-1">Boş saatler</h2>
+        <p class="text-muted mb-3">
+            @(selectedPet?.Name ?? "Hayvan seçilmedi") · @selectedService.Name (@selectedService.DurationMinutes dk, @selectedService.Price.ToString("N2") ₺)
+            · @Model.Date!.Value.ToString("dd.MM.yyyy dddd")
+        </p>
+
+        @* 2. adım: POST formu. Gizli alanlar elle yazıldı: asp-for kullanılsaydı yukarıdaki seçim kutularıyla aynı id'ler oluşurdu. *@
+        <form asp-action="Create" method="post">
+            <input type="hidden" name="PetId" value="@Model.PetId" />
+            <input type="hidden" name="ServiceId" value="@Model.ServiceId" />
+            <input type="hidden" name="Date" value="@Model.Date?.ToString("yyyy-MM-dd")" />
+
+            @* Boş saat listesi ayrı bir parça (partial) olarak tutulur; formun geri kalanına dokunmadan değiştirilebilir. *@
+            <div id="slot-list">
+                <partial name="_SlotList" model="Model" />
+            </div>
+        </form>
+    }
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

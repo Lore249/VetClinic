@@ -1,0 +1,14 @@
+@model AppointmentStatus
+@* Randevu durumunun renkli etiketi. Üye, hekim ve admin sayfaları aynı partial'ı kullanır;
+   metin EnumTexts'ten gelir, burada yalnızca renk seçilir. *@
+@{
+    var cssClass = Model switch
+    {
+        AppointmentStatus.Pending => "text-bg-warning",
+        AppointmentStatus.Approved => "text-bg-primary",
+        AppointmentStatus.Completed => "text-bg-success",
+        AppointmentStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+}
+<span class="badge @cssClass">@EnumTexts.ToTurkish(Model)</span>

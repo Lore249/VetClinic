@@ -10,6 +10,9 @@ namespace VetClinic.Services
     {
         Task<List<Service>> GetAllAsync();
 
+        // Yalnızca aktif hizmetler: randevu formunda (ve sonraki günlerde ana sayfa ile MCP'de) bunlar gösterilir.
+        Task<List<Service>> GetActiveAsync();
+
         Task<Service?> GetByIdAsync(int id);
 
         Task<ServiceResult<int>> CreateAsync(ServiceFormViewModel model);

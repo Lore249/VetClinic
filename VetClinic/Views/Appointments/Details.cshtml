@@ -1,0 +1,64 @@
+@model AppointmentDetailsViewModel
+@{
+    ViewData["Title"] = "Randevu Detayı";
+    var appointment = Model.Appointment;
+}
+
+<h1 class="h3 mb-3">Randevu Detayı</h1>
+
+@* İptal kuralına takılan bir deneme olursa servisin mesajı burada görünür. *@
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<div class="card kk-card mb-3">
+    <div class="card-body p-4">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Durum</dt>
+            <dd class="col-sm-8"><partial name="_AppointmentStatusBadge" model="appointment.Status" /></dd>
+
+            <dt class="col-sm-4">Hayvan</dt>
+            <dd class="col-sm-8">@appointment.Pet.Name</dd>
+
+            <dt class="col-sm-4">Hizmet</dt>
+            <dd class="col-sm-8">@appointment.Service.Name</dd>
+
+            <dt class="col-sm-4">Veteriner</dt>
+            <dd class="col-sm-8">@appointment.Veterinarian.Title @appointment.Veterinarian.User.FullName</dd>
+
+            <dt class="col-sm-4">Tarih</dt>
+            <dd class="col-sm-8">@appointment.StartTime.ToString("dd.MM.yyyy dddd")</dd>
+
+            <dt class="col-sm-4">Saat</dt>
+            <dd class="col-sm-8">@appointment.StartTime.ToString("HH:mm") - @appointment.EndTime.ToString("HH:mm") (@appointment.DurationMinutes dk)</dd>
+
+            @* Süre ve ücret randevu alındığı andaki değerlerdir; hizmetin fiyatı sonradan değişse de burada değişmez. *@
+            <dt class="col-sm-4">Ücret</dt>
+            <dd class="col-sm-8">@appointment.Price.ToString("N2") ₺</dd>
+
+            <dt class="col-sm-4">Oluşturulma</dt>
+            <dd class="col-sm-8">@appointment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
+
+            @if (appointment.RejectionReason != null)
+            {
+                <dt class="col-sm-4">Ret nedeni</dt>
+                <dd class="col-sm-8">@appointment.RejectionReason</dd>
+            }
+
+            @if (appointment.ExaminationNote != null)
+            {
+                <dt class="col-sm-4">Muayene notu</dt>
+                <dd class="col-sm-8">@appointment.ExaminationNote</dd>
+            }
+        </dl>
+    </div>
+</div>
+
+@if (Model.CanCancel)
+{
+    @* İptal bir bağlantı değil POST formudur; confirm() yanlışlıkla tıklamaya karşı onay ister. *@
+    <form asp-action="Cancel" asp-route-id="@appointment.Id" method="post" class="mb-3"
+          onsubmit="return confirm('Bu randevu iptal edilsin mi?');">
+        <button type="submit" class="btn btn-outline-danger">Randevuyu İptal Et</button>
+    </form>
+}
+
+<a asp-action="Index">&larr; Randevularım</a>
