@@ -15,18 +15,39 @@ namespace VetClinic.Services
         // ownerUserId her zaman oturumdaki kullanıcıdan gelir; hayvanın bu kullanıcıya ait olduğu ilk kontroldür.
         Task<ServiceResult<int>> CreateAsync(string ownerUserId, int petId, int serviceId, int veterinarianId, DateTime startTime);
 
-        // Üyenin hayvanlarına ait tüm randevular (hayvan, hizmet ve hekim bilgisiyle).
-        Task<List<Appointment>> GetMyAppointmentsAsync(string ownerUserId);
+        // Kullanıcının görebildiği randevular (hayvan, sahip, hizmet ve hekim bilgisiyle):
+        // Üye kendi hayvanlarınınkini, Veteriner kendisininkini, Admin hepsini görür.
+        Task<List<Appointment>> GetAppointmentsAsync(string userId, string userRole);
 
-        // Üyenin tek bir randevusu; randevu başkasının hayvanına aitse null döner.
-        Task<Appointment?> GetMyAppointmentAsync(string ownerUserId, int appointmentId);
+        // Tek bir randevu; kullanıcı bu randevuyu göremiyorsa null döner.
+        Task<Appointment?> GetAppointmentAsync(int appointmentId, string userId, string userRole);
 
-        // Randevu şu anda iptal edilebilir mi? Detay sayfası "İptal Et" düğmesini göstermek için sorar;
-        // CancelAsync de aynı kuralı uygular, kural iki yerde yazılmaz.
+        // Randevu şu anda iptal edilebilir / tamamlanabilir mi? Detay sayfaları düğmeyi göstermek için sorar;
+        // CancelAsync ve CompleteAsync de aynı kuralları uygular, kurallar iki yerde yazılmaz.
         bool CanCancel(Appointment appointment);
 
-        // Bekliyor ya da Onaylandı durumundaki, başlangıcı gelmemiş randevuyu iptal eder.
-        // Yalnızca hayvanın sahibi (Üye) ya da Admin yapabilir; yetkiyi servis kendisi kontrol eder.
+        bool CanComplete(Appointment appointment);
+
+        // Durum değiştiren işlemler. Hepsi işlemi yapan kullanıcıyı ve rolünü alır, yetkiyi kendisi kontrol eder:
+        // göremediği randevu için NotFound, görebildiği ama yetkisi olmadığı işlem için Forbidden döner.
+
+        // Bekliyor -> Onaylandı: Admin ya da randevunun hekimi.
+        Task<ServiceResult<bool>> ApproveAsync(int appointmentId, string userId, string userRole);
+
+        // Bekliyor -> Reddedildi: Admin ya da randevunun hekimi; ret nedeni zorunlu.
+        Task<ServiceResult<bool>> RejectAsync(int appointmentId, string userId, string userRole, string? reason);
+
+        // Onaylandı -> Tamamlandı: yalnızca randevunun hekimi, başlangıç saati geldikten sonra; muayene notu zorunlu.
+        Task<ServiceResult<bool>> CompleteAsync(int appointmentId, string userId, string userRole, string? examinationNote);
+
+        // Bekliyor ya da Onaylandı -> İptal Edildi: hayvanın sahibi ya da Admin; başlangıç saati geçmemiş olmalı.
         Task<ServiceResult<bool>> CancelAsync(int appointmentId, string userId, string userRole);
+
+        // Yalnızca Admin: Bekliyor ya da Onaylandı randevunun hekimini ve başlangıç saatini değiştirir.
+        // Hizmet, süre ve ücret değişmez; CreateAsync'in 2-7 numaralı kontrolleri uygulanır.
+        Task<ServiceResult<bool>> UpdateAsync(int appointmentId, string userId, string userRole, int veterinarianId, DateTime startTime);
+
+        // Yalnızca Admin.
+        Task<ServiceResult<bool>> DeleteAsync(int appointmentId, string userId, string userRole);
     }
 }

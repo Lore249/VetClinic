@@ -1,0 +1,45 @@
+@model List<Appointment>
+@{
+    ViewData["Title"] = "Hekim Paneli";
+
+    // Onay ya da tamamlama bekleyenler en yakından uzağa; kapanmış olanlar (tamamlanan, reddedilen, iptal edilen) en yeniden eskiye.
+    var open = Model
+        .Where(a => a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Approved)
+        .OrderBy(a => a.StartTime)
+        .ToList();
+    var closed = Model
+        .Where(a => a.Status != AppointmentStatus.Pending && a.Status != AppointmentStatus.Approved)
+        .OrderByDescending(a => a.StartTime)
+        .ToList();
+}
+
+<h1 class="h3 mb-1">Hekim Paneli</h1>
+<p class="text-muted mb-3">Yalnızca size ait randevular listelenir. Bekleyen randevuyu onaylayın ya da nedenini yazarak reddedin; onaylı randevuyu muayeneden sonra not girerek tamamlayın.</p>
+
+<div class="card kk-card mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Bekleyen ve onaylı randevular</h2>
+        @if (open.Count == 0)
+        {
+            <p class="text-muted mb-0">İşlem bekleyen randevunuz yok.</p>
+        }
+        else
+        {
+            <partial name="_AppointmentList" model="open" />
+        }
+    </div>
+</div>
+
+<div class="card kk-card">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Tamamlanan, reddedilen ve iptal edilen randevular</h2>
+        @if (closed.Count == 0)
+        {
+            <p class="text-muted mb-0">Kayıt yok.</p>
+        }
+        else
+        {
+            <partial name="_AppointmentList" model="closed" />
+        }
+    </div>
+</div>

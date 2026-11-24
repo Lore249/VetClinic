@@ -1,0 +1,53 @@
+@model List<Appointment>
+@{
+    ViewData["Title"] = "Randevular";
+    var pendingCount = Model.Count(a => a.Status == AppointmentStatus.Pending);
+}
+
+<h1 class="h3 mb-1">Randevular</h1>
+<p class="text-muted mb-3">Tüm randevular, en yeni tarih en üstte. Onay bekleyen randevu sayısı: <strong>@pendingCount</strong></p>
+
+<div class="card kk-card">
+    <div class="card-body">
+        @if (Model.Count == 0)
+        {
+            <p class="text-muted mb-0">Henüz randevu yok.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Saat</th>
+                            <th>Hayvan</th>
+                            <th>Sahibi</th>
+                            <th>Hizmet</th>
+                            <th>Veteriner</th>
+                            <th>Durum</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var appointment in Model)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@appointment.StartTime.ToString("dd.MM.yyyy ddd")</td>
+                                <td class="text-nowrap">@appointment.StartTime.ToString("HH:mm")-@appointment.EndTime.ToString("HH:mm")</td>
+                                <td>@appointment.Pet.Name</td>
+                                <td>@appointment.Pet.Owner.FullName</td>
+                                <td>@appointment.Service.Name</td>
+                                <td>@appointment.Veterinarian.Title @appointment.Veterinarian.User.FullName</td>
+                                <td><partial name="_AppointmentStatusBadge" model="appointment.Status" /></td>
+                                <td class="text-end">
+                                    <a asp-action="Details" asp-route-id="@appointment.Id" class="btn btn-outline-primary btn-sm">Detay</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

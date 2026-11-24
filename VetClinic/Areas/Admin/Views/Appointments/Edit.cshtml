@@ -1,0 +1,52 @@
+@model AppointmentEditViewModel
+@{
+    ViewData["Title"] = "Randevuyu Düzenle";
+    var appointment = Model.Appointment!;
+}
+
+<h1 class="h3 mb-1">Randevuyu Düzenle</h1>
+<p class="text-muted mb-3">
+    @appointment.Pet.Name · @appointment.Service.Name (@appointment.DurationMinutes dk, @appointment.Price.ToString("N2") ₺) ·
+    şu an @appointment.Veterinarian.Title @appointment.Veterinarian.User.FullName, @appointment.StartTime.ToString("dd.MM.yyyy HH:mm")
+</p>
+<p class="text-muted small mb-3">
+    Yalnızca hekim ve başlangıç saati değiştirilebilir; hizmet, süre ve ücret randevu alındığı andaki gibi kalır.
+    Yeni saat, randevu almadaki kurallarla (çalışma saatleri, hekim müsaitliği, çakışmalar) yeniden kontrol edilir.
+</p>
+
+<div class="card kk-card">
+    <div class="card-body p-4">
+        <form asp-action="Edit" method="post">
+            @* Çakışma ve müsaitlik hataları burada görünür. *@
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <input type="hidden" asp-for="Id" />
+
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="VeterinarianId" class="form-label"></label>
+                    <select asp-for="VeterinarianId" class="form-select">
+                        @foreach (var veterinarian in Model.VeterinarianOptions)
+                        {
+                            <option value="@veterinarian.Id">@veterinarian.Title @veterinarian.User.FullName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="VeterinarianId" class="text-danger"></span>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="StartTime" class="form-label"></label>
+                    @* datetime-local kutusu değeri 2026-11-24T09:00 biçiminde bekler ve gönderir. *@
+                    <input asp-for="StartTime" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control" />
+                    <span asp-validation-for="StartTime" class="text-danger"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Vazgeç</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -3,7 +3,7 @@
 }
 
 <h1 class="h3 mb-1">Yönetim Paneli</h1>
-<p class="text-muted mb-4">Kliniğin bilgilerini, çalışma saatlerini, uzmanlık alanlarını, hizmetlerini ve veterinerlerini buradan yönetebilirsiniz.</p>
+<p class="text-muted mb-4">Kliniğin bilgilerini, çalışma saatlerini, uzmanlık alanlarını, hizmetlerini, veterinerlerini ve randevularını buradan yönetebilirsiniz.</p>
 
 <div class="row g-3">
     <div class="col-md-6">
@@ -48,6 +48,15 @@
                 <h2 class="h5">Veterinerler</h2>
                 <p class="text-muted">Hekimlerin giriş hesapları, uzmanlıkları, verdikleri hizmetler ve müsaitlik saatleri.</p>
                 <a asp-controller="Veterinarians" asp-action="Index" class="btn btn-outline-primary btn-sm stretched-link">Yönet</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card kk-card h-100">
+            <div class="card-body">
+                <h2 class="h5">Randevular</h2>
+                <p class="text-muted">Tüm randevuları görme, onaylama, reddetme, iptal etme, hekim ya da saat değiştirme ve silme.</p>
+                <a asp-controller="Appointments" asp-action="Index" class="btn btn-outline-primary btn-sm stretched-link">Yönet</a>
             </div>
         </div>
     </div>

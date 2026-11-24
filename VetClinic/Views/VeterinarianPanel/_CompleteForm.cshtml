@@ -1,0 +1,12 @@
+@model CompleteAppointmentViewModel
+@* Muayeneyi tamamlama formu; yalnızca hekim panelinde. Muayene notu zorunludur. *@
+
+<form asp-action="Complete" method="post">
+    <input type="hidden" name="AppointmentId" value="@Model.AppointmentId" />
+    <div class="mb-2">
+        <label asp-for="ExaminationNote" class="form-label"></label>
+        <textarea asp-for="ExaminationNote" class="form-control" rows="4" placeholder="Bulgular, uygulanan işlem ve öneriler"></textarea>
+        <span asp-validation-for="ExaminationNote" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Tamamla</button>
+</form>

@@ -30,14 +30,15 @@ namespace VetClinic.Controllers
         // Randevularım
         public async Task<IActionResult> Index()
         {
-            var appointments = await _appointmentService.GetMyAppointmentsAsync(CurrentUserId);
+            // Rol olarak Üye verilir: servis yalnızca bu kullanıcının hayvanlarının randevularını döndürür.
+            var appointments = await _appointmentService.GetAppointmentsAsync(CurrentUserId, AppRoles.Member);
             return View(appointments);
         }
 
         public async Task<IActionResult> Details(int id)
         {
             // Başkasının randevusunun id'si yazılırsa servis null döner ve 404 gösterilir.
-            var appointment = await _appointmentService.GetMyAppointmentAsync(CurrentUserId, id);
+            var appointment = await _appointmentService.GetAppointmentAsync(id, CurrentUserId, AppRoles.Member);
             if (appointment == null)
             {
                 return NotFound();
@@ -112,7 +113,7 @@ namespace VetClinic.Controllers
             }
 
             // İptal kuralına takıldıysa (ör. başlangıç saati geçmişse) detay sayfası hata mesajıyla gösterilir.
-            var appointment = await _appointmentService.GetMyAppointmentAsync(CurrentUserId, id);
+            var appointment = await _appointmentService.GetAppointmentAsync(id, CurrentUserId, AppRoles.Member);
             if (appointment == null)
             {
                 return NotFound();

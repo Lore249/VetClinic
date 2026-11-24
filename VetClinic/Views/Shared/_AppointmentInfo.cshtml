@@ -1,0 +1,46 @@
+@model Appointment
+@* Randevunun bilgi kartı; hekim ve admin detay sayfaları ortak kullanır (sahip bilgisi de gösterilir). *@
+
+<div class="card kk-card mb-3">
+    <div class="card-body p-4">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Durum</dt>
+            <dd class="col-sm-8"><partial name="_AppointmentStatusBadge" model="Model.Status" /></dd>
+
+            <dt class="col-sm-4">Hayvan</dt>
+            <dd class="col-sm-8">@Model.Pet.Name (@EnumTexts.ToTurkish(Model.Pet.Species), @Model.Pet.Breed, @Model.Pet.WeightKg.ToString("0.##") kg)</dd>
+
+            <dt class="col-sm-4">Sahibi</dt>
+            <dd class="col-sm-8">@Model.Pet.Owner.FullName (@Model.Pet.Owner.Email)</dd>
+
+            <dt class="col-sm-4">Hizmet</dt>
+            <dd class="col-sm-8">@Model.Service.Name</dd>
+
+            <dt class="col-sm-4">Veteriner</dt>
+            <dd class="col-sm-8">@Model.Veterinarian.Title @Model.Veterinarian.User.FullName</dd>
+
+            <dt class="col-sm-4">Tarih ve saat</dt>
+            <dd class="col-sm-8">
+                @Model.StartTime.ToString("dd.MM.yyyy dddd") · @Model.StartTime.ToString("HH:mm") - @Model.EndTime.ToString("HH:mm") (@Model.DurationMinutes dk)
+            </dd>
+
+            <dt class="col-sm-4">Ücret</dt>
+            <dd class="col-sm-8">@Model.Price.ToString("N2") ₺</dd>
+
+            <dt class="col-sm-4">Oluşturulma</dt>
+            <dd class="col-sm-8">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd>
+
+            @if (Model.RejectionReason != null)
+            {
+                <dt class="col-sm-4">Ret nedeni</dt>
+                <dd class="col-sm-8">@Model.RejectionReason</dd>
+            }
+
+            @if (Model.ExaminationNote != null)
+            {
+                <dt class="col-sm-4">Muayene notu</dt>
+                <dd class="col-sm-8">@Model.ExaminationNote</dd>
+            }
+        </dl>
+    </div>
+</div>

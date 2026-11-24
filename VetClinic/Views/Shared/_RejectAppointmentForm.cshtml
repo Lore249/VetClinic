@@ -1,0 +1,14 @@
+@model RejectAppointmentViewModel
+@* Ret formu; hekim panelinde ve admin panelinde kullanılır. asp-action yalnızca action adını verir:
+   controller ve area o anki sayfadan gelir, böylece form her panelde kendi controller'ının Reject action'ına gider.
+   Hata sonrası sayfa yeniden çizilince yazılan metin ve hata mesajı ModelState'ten okunur. *@
+
+<form asp-action="Reject" method="post">
+    <input type="hidden" name="AppointmentId" value="@Model.AppointmentId" />
+    <div class="mb-2">
+        <label asp-for="Reason" class="form-label"></label>
+        <textarea asp-for="Reason" class="form-control" rows="2" placeholder="Örnek: Hekim o gün izinli; lütfen başka bir gün seçin."></textarea>
+        <span asp-validation-for="Reason" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-outline-danger">Reddet</button>
+</form>

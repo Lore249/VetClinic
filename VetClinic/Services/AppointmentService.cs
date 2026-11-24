@@ -98,54 +98,18 @@ namespace VetClinic.Services
                 return ServiceResult<int>.NotFound("Hayvan bulunamadı.");
             }
 
-            // 2. Hizmet ve hekim var mı (yoksa NotFound), hizmet aktif mi ve hekim bu hizmeti veriyor mu (Validation)?
+            // 2. Hizmet var mı? Süre ve ücret hizmetten kopyalanacağı için burada yüklenir.
             var service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.Id == serviceId);
             if (service == null)
             {
                 return ServiceResult<int>.NotFound("Hizmet bulunamadı.");
             }
 
-            var veterinarian = await _context.Veterinarians
-                .AsNoTracking()
-                .Include(v => v.Services)
-                .Include(v => v.Availabilities)
-                .AsSplitQuery()
-                .FirstOrDefaultAsync(v => v.Id == veterinarianId);
-            if (veterinarian == null)
-            {
-                return ServiceResult<int>.NotFound("Hekim bulunamadı.");
-            }
-
-            if (!service.IsActive)
-            {
-                return ServiceResult<int>.Validation("Bu hizmet şu anda randevuya açık değil.");
-            }
-
-            if (!veterinarian.Services.Any(s => s.Id == serviceId))
-            {
-                return ServiceResult<int>.Validation("Seçilen hekim bu hizmeti vermiyor.");
-            }
-
-            // 3-6. Ortak kontrol metodu. Bitiş saati formdan alınmaz, hizmetin süresinden hesaplanır.
-            var endTime = startTime.AddMinutes(service.DurationMinutes);
-            var date = DateOnly.FromDateTime(startTime);
-            var workingHour = await _context.ClinicWorkingHours.AsNoTracking()
-                .FirstOrDefaultAsync(h => h.DayOfWeek == date.DayOfWeek);
-            var veterinarianAppointments = await GetVeterinarianAppointmentsOnDayAsync(new List<int> { veterinarianId }, date);
-
-            var check = CheckTimeRules(startTime, endTime, DateTime.Now, workingHour, veterinarian.Availabilities, veterinarianAppointments);
+            // 2-7. CreateAsync ve UpdateAsync'in ortak kontrolleri. Yeni randevuda hariç tutulacak randevu yoktur (0).
+            var check = await CheckBookingRulesAsync(service, petId, veterinarianId, startTime, service.DurationMinutes, 0);
             if (!check.Success)
             {
                 return ServiceResult<int>.Fail(check.ErrorType, check.ErrorMessage!);
-            }
-
-            // 7. Aynı hayvanın aynı aralıkta başka bir randevusu var mı? (Başka bir hekimde olsa bile hayvan iki yerde olamaz.)
-            var petAppointments = await GetPetAppointmentsOnDayAsync(petId, date);
-            var petConflict = FindOverlapping(petAppointments, startTime, endTime);
-            if (petConflict != null)
-            {
-                return ServiceResult<int>.Conflict(
-                    $"Bu hayvanın {petConflict.StartTime:HH:mm}-{petConflict.EndTime:HH:mm} arasında başka bir randevusu var.");
             }
 
             // Süre ve ücret hizmetten kopyalanır: hizmet sonradan değişse de bu randevu ve ciro raporu değişmez.
@@ -155,7 +119,7 @@ namespace VetClinic.Services
                 VeterinarianId = veterinarianId,
                 ServiceId = serviceId,
                 StartTime = startTime,
-                EndTime = endTime,
+                EndTime = startTime.AddMinutes(service.DurationMinutes),
                 DurationMinutes = service.DurationMinutes,
                 Price = service.Price,
                 Status = AppointmentStatus.Pending,
@@ -167,30 +131,31 @@ namespace VetClinic.Services
             return ServiceResult<int>.Ok(appointment.Id);
         }
 
-        public async Task<List<Appointment>> GetMyAppointmentsAsync(string ownerUserId)
+        public async Task<List<Appointment>> GetAppointmentsAsync(string userId, string userRole)
         {
-            // Randevuda sahip bilgisi yok; hayvan üzerinden (a.Pet.OwnerId) filtrelenir.
-            return await _context.Appointments
+            // Hangi randevuların görüneceğine VisibleTo karar verir; burada yalnızca ilişkili veriler eklenir ve sıralanır.
+            return await VisibleTo(userId, userRole)
                 .AsNoTracking()
                 .Include(a => a.Pet)
+                    .ThenInclude(p => p.Owner)
                 .Include(a => a.Service)
                 .Include(a => a.Veterinarian)
                     .ThenInclude(v => v.User)
-                .Where(a => a.Pet.OwnerId == ownerUserId)
                 .OrderByDescending(a => a.StartTime)
                 .ToListAsync();
         }
 
-        public async Task<Appointment?> GetMyAppointmentAsync(string ownerUserId, int appointmentId)
+        public async Task<Appointment?> GetAppointmentAsync(int appointmentId, string userId, string userRole)
         {
-            // Başkasının randevusunun id'si yazılırsa null döner (controller 404 gösterir); kaydın var olduğu bilgisi sızmaz.
-            return await _context.Appointments
+            // Kullanıcının göremediği randevunun id'si yazılırsa null döner (controller 404 gösterir); kaydın var olduğu bilgisi sızmaz.
+            return await VisibleTo(userId, userRole)
                 .AsNoTracking()
                 .Include(a => a.Pet)
+                    .ThenInclude(p => p.Owner)
                 .Include(a => a.Service)
                 .Include(a => a.Veterinarian)
                     .ThenInclude(v => v.User)
-                .FirstOrDefaultAsync(a => a.Id == appointmentId && a.Pet.OwnerId == ownerUserId);
+                .FirstOrDefaultAsync(a => a.Id == appointmentId);
         }
 
         public bool CanCancel(Appointment appointment)
@@ -198,15 +163,103 @@ namespace VetClinic.Services
             return CheckCancelRules(appointment, DateTime.Now).Success;
         }
 
+        public bool CanComplete(Appointment appointment)
+        {
+            return CheckCompleteRules(appointment, DateTime.Now).Success;
+        }
+
+        public async Task<ServiceResult<bool>> ApproveAsync(int appointmentId, string userId, string userRole)
+        {
+            var appointment = await FindVisibleAsync(appointmentId, userId, userRole);
+            if (appointment == null)
+            {
+                return ServiceResult<bool>.NotFound("Randevu bulunamadı.");
+            }
+
+            // Üye kendi randevusunu görebilir ama onaylayamaz: kayıt görünüyor, işlem yetkisi yok (Forbidden).
+            if (userRole != AppRoles.Admin && userRole != AppRoles.Veterinarian)
+            {
+                return ServiceResult<bool>.Forbidden("Randevuyu yalnızca randevunun hekimi ya da yönetici onaylayabilir.");
+            }
+
+            if (appointment.Status != AppointmentStatus.Pending)
+            {
+                return ServiceResult<bool>.Validation(
+                    $"Yalnızca \"Bekliyor\" durumundaki randevu onaylanabilir; bu randevu \"{EnumTexts.ToTurkish(appointment.Status)}\".");
+            }
+
+            appointment.Status = AppointmentStatus.Approved;
+            await _context.SaveChangesAsync();
+            return ServiceResult<bool>.Ok(true);
+        }
+
+        public async Task<ServiceResult<bool>> RejectAsync(int appointmentId, string userId, string userRole, string? reason)
+        {
+            var appointment = await FindVisibleAsync(appointmentId, userId, userRole);
+            if (appointment == null)
+            {
+                return ServiceResult<bool>.NotFound("Randevu bulunamadı.");
+            }
+
+            if (userRole != AppRoles.Admin && userRole != AppRoles.Veterinarian)
+            {
+                return ServiceResult<bool>.Forbidden("Randevuyu yalnızca randevunun hekimi ya da yönetici reddedebilir.");
+            }
+
+            if (appointment.Status != AppointmentStatus.Pending)
+            {
+                return ServiceResult<bool>.Validation(
+                    $"Yalnızca \"Bekliyor\" durumundaki randevu reddedilebilir; bu randevu \"{EnumTexts.ToTurkish(appointment.Status)}\".");
+            }
+
+            // Formdaki [Required] kullanıcıyı göndermeden uyarır; asıl kural burada, çünkü servis hangi arayüzden çağrılırsa çağrılsın geçerli.
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                return ServiceResult<bool>.Validation("Ret nedeni zorunludur.");
+            }
+
+            appointment.Status = AppointmentStatus.Rejected;
+            appointment.RejectionReason = reason.Trim();
+            await _context.SaveChangesAsync();
+            return ServiceResult<bool>.Ok(true);
+        }
+
+        public async Task<ServiceResult<bool>> CompleteAsync(int appointmentId, string userId, string userRole, string? examinationNote)
+        {
+            var appointment = await FindVisibleAsync(appointmentId, userId, userRole);
+            if (appointment == null)
+            {
+                return ServiceResult<bool>.NotFound("Randevu bulunamadı.");
+            }
+
+            // Muayeneyi yapan hekim not girer; yönetici de üye de tamamlayamaz.
+            if (userRole != AppRoles.Veterinarian)
+            {
+                return ServiceResult<bool>.Forbidden("Randevuyu yalnızca randevunun hekimi tamamlayabilir.");
+            }
+
+            var check = CheckCompleteRules(appointment, DateTime.Now);
+            if (!check.Success)
+            {
+                return check;
+            }
+
+            if (string.IsNullOrWhiteSpace(examinationNote))
+            {
+                return ServiceResult<bool>.Validation("Muayene notu zorunludur.");
+            }
+
+            appointment.Status = AppointmentStatus.Completed;
+            appointment.ExaminationNote = examinationNote.Trim();
+            await _context.SaveChangesAsync();
+            return ServiceResult<bool>.Ok(true);
+        }
+
         public async Task<ServiceResult<bool>> CancelAsync(int appointmentId, string userId, string userRole)
         {
-            var appointment = await _context.Appointments
-                .Include(a => a.Pet)
-                .Include(a => a.Veterinarian)
-                .FirstOrDefaultAsync(a => a.Id == appointmentId);
-
             // Kaydı göremeyen kullanıcıya (başkasının randevusu) "bulunamadı" denir.
-            if (appointment == null || !CanView(appointment, userId, userRole))
+            var appointment = await FindVisibleAsync(appointmentId, userId, userRole);
+            if (appointment == null)
             {
                 return ServiceResult<bool>.NotFound("Randevu bulunamadı.");
             }
@@ -224,6 +277,67 @@ namespace VetClinic.Services
             }
 
             appointment.Status = AppointmentStatus.Cancelled;
+            await _context.SaveChangesAsync();
+            return ServiceResult<bool>.Ok(true);
+        }
+
+        public async Task<ServiceResult<bool>> UpdateAsync(int appointmentId, string userId, string userRole,
+            int veterinarianId, DateTime startTime)
+        {
+            var appointment = await FindVisibleAsync(appointmentId, userId, userRole);
+            if (appointment == null)
+            {
+                return ServiceResult<bool>.NotFound("Randevu bulunamadı.");
+            }
+
+            if (userRole != AppRoles.Admin)
+            {
+                return ServiceResult<bool>.Forbidden("Randevuyu yalnızca yönetici düzenleyebilir.");
+            }
+
+            if (appointment.Status != AppointmentStatus.Pending && appointment.Status != AppointmentStatus.Approved)
+            {
+                return ServiceResult<bool>.Validation(
+                    $"\"{EnumTexts.ToTurkish(appointment.Status)}\" durumundaki randevu düzenlenemez.");
+            }
+
+            var service = await _context.Services.AsNoTracking().FirstOrDefaultAsync(s => s.Id == appointment.ServiceId);
+            if (service == null)
+            {
+                return ServiceResult<bool>.NotFound("Hizmet bulunamadı.");
+            }
+
+            // 2-7. CreateAsync ile aynı kontroller. Süre olarak randevuda saklanan süre kullanılır (hizmetin bugünkü süresi değil)
+            // ve randevunun kendisi çakışma hesabına girmez.
+            var check = await CheckBookingRulesAsync(service, appointment.PetId, veterinarianId, startTime,
+                appointment.DurationMinutes, appointment.Id);
+            if (!check.Success)
+            {
+                return check;
+            }
+
+            // Hizmet, süre ve ücret değişmez; yalnızca hekim ve saat değişir, bitiş saklanan süreden yeniden hesaplanır.
+            appointment.VeterinarianId = veterinarianId;
+            appointment.StartTime = startTime;
+            appointment.EndTime = startTime.AddMinutes(appointment.DurationMinutes);
+            await _context.SaveChangesAsync();
+            return ServiceResult<bool>.Ok(true);
+        }
+
+        public async Task<ServiceResult<bool>> DeleteAsync(int appointmentId, string userId, string userRole)
+        {
+            var appointment = await FindVisibleAsync(appointmentId, userId, userRole);
+            if (appointment == null)
+            {
+                return ServiceResult<bool>.NotFound("Randevu bulunamadı.");
+            }
+
+            if (userRole != AppRoles.Admin)
+            {
+                return ServiceResult<bool>.Forbidden("Randevuyu yalnızca yönetici silebilir.");
+            }
+
+            _context.Appointments.Remove(appointment);
             await _context.SaveChangesAsync();
             return ServiceResult<bool>.Ok(true);
         }
@@ -246,22 +360,115 @@ namespace VetClinic.Services
             return ServiceResult<bool>.Ok(true);
         }
 
-        // Kaydı görebilme kuralı: Admin tüm randevuları, Üye yalnızca kendi hayvanlarının, Veteriner yalnızca kendi randevularını görür.
-        // Durum değiştiren her işlem önce buna bakar. Pet ve Veterinarian yüklenmiş olmalıdır.
-        private static bool CanView(Appointment appointment, string userId, string userRole)
+        // Tamamlama kuralı tek yerde: yalnızca Onaylandı durumundaki ve başlangıç saati gelmiş randevu tamamlanır.
+        // CompleteAsync uygular; hekim panelindeki tamamlama formu da CanComplete ile buna sorar.
+        private static ServiceResult<bool> CheckCompleteRules(Appointment appointment, DateTime now)
         {
-            return userRole switch
+            if (appointment.Status != AppointmentStatus.Approved)
             {
-                AppRoles.Admin => true,
-                AppRoles.Member => appointment.Pet.OwnerId == userId,
-                AppRoles.Veterinarian => appointment.Veterinarian.UserId == userId,
-                _ => false
-            };
+                return ServiceResult<bool>.Validation(
+                    $"Yalnızca \"Onaylandı\" durumundaki randevu tamamlanabilir; bu randevu \"{EnumTexts.ToTurkish(appointment.Status)}\".");
+            }
+
+            if (appointment.StartTime > now)
+            {
+                return ServiceResult<bool>.Validation("Başlangıç saati gelmemiş randevu tamamlanamaz.");
+            }
+
+            return ServiceResult<bool>.Ok(true);
+        }
+
+        // Görünürlük kuralı tek yerde: Admin tüm randevuları, Üye yalnızca kendi hayvanlarının, Veteriner yalnızca kendi
+        // randevularını görür. Sorguya eklenen bir Where olduğu için SQL'de çalışır. Listeler, detaylar ve durum değiştiren
+        // tüm işlemler randevuyu bunun üzerinden bulur; göremediği randevu kullanıcı için "yok"tur.
+        private IQueryable<Appointment> VisibleTo(string userId, string userRole)
+        {
+            if (userRole == AppRoles.Admin)
+            {
+                return _context.Appointments;
+            }
+
+            if (userRole == AppRoles.Member)
+            {
+                return _context.Appointments.Where(a => a.Pet.OwnerId == userId);
+            }
+
+            if (userRole == AppRoles.Veterinarian)
+            {
+                return _context.Appointments.Where(a => a.Veterinarian.UserId == userId);
+            }
+
+            // Tanınmayan rol hiçbir randevuyu göremez.
+            return _context.Appointments.Where(a => false);
+        }
+
+        // Durum değiştiren işlemler randevuyu bununla yükler. AsNoTracking yok: işlem randevuyu değiştirip kaydedecek.
+        private async Task<Appointment?> FindVisibleAsync(int appointmentId, string userId, string userRole)
+        {
+            return await VisibleTo(userId, userRole).FirstOrDefaultAsync(a => a.Id == appointmentId);
+        }
+
+        // 2-7 numaralı kontroller. CreateAsync ve UpdateAsync ikisi de bunu çağırır; kurallar ikinci bir yerde yazılmaz.
+        // durationMinutes: yeni randevuda hizmetin süresi, düzenlemede randevuda saklanan süre.
+        // excludedAppointmentId: düzenlemede randevunun kendisi 6 ve 7'deki çakışma hesabına girmesin (yeni randevuda 0).
+        private async Task<ServiceResult<bool>> CheckBookingRulesAsync(Service service, int petId, int veterinarianId,
+            DateTime startTime, int durationMinutes, int excludedAppointmentId)
+        {
+            // 2. Hekim var mı (yoksa NotFound), hizmet aktif mi ve hekim bu hizmeti veriyor mu (Validation)?
+            var veterinarian = await _context.Veterinarians
+                .AsNoTracking()
+                .Include(v => v.Services)
+                .Include(v => v.Availabilities)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(v => v.Id == veterinarianId);
+            if (veterinarian == null)
+            {
+                return ServiceResult<bool>.NotFound("Hekim bulunamadı.");
+            }
+
+            if (!service.IsActive)
+            {
+                return ServiceResult<bool>.Validation("Bu hizmet şu anda randevuya açık değil.");
+            }
+
+            if (!veterinarian.Services.Any(s => s.Id == service.Id))
+            {
+                return ServiceResult<bool>.Validation("Seçilen hekim bu hizmeti vermiyor.");
+            }
+
+            // 3-6. Ortak kontrol metodu. Bitiş saati formdan alınmaz, süreden hesaplanır.
+            var endTime = startTime.AddMinutes(durationMinutes);
+            var date = DateOnly.FromDateTime(startTime);
+            var workingHour = await _context.ClinicWorkingHours.AsNoTracking()
+                .FirstOrDefaultAsync(h => h.DayOfWeek == date.DayOfWeek);
+            var veterinarianAppointments = (await GetVeterinarianAppointmentsOnDayAsync(new List<int> { veterinarianId }, date))
+                .Where(a => a.Id != excludedAppointmentId)
+                .ToList();
+
+            var check = CheckTimeRules(startTime, endTime, DateTime.Now, workingHour, veterinarian.Availabilities, veterinarianAppointments);
+            if (!check.Success)
+            {
+                return check;
+            }
+
+            // 7. Aynı hayvanın aynı aralıkta başka bir randevusu var mı? (Başka bir hekimde olsa bile hayvan iki yerde olamaz.)
+            var petAppointments = (await GetPetAppointmentsOnDayAsync(petId, date))
+                .Where(a => a.Id != excludedAppointmentId)
+                .ToList();
+            var petConflict = FindOverlapping(petAppointments, startTime, endTime);
+            if (petConflict != null)
+            {
+                return ServiceResult<bool>.Conflict(
+                    $"Bu hayvanın {petConflict.StartTime:HH:mm}-{petConflict.EndTime:HH:mm} arasında başka bir randevusu var.");
+            }
+
+            return ServiceResult<bool>.Ok(true);
         }
 
         // Ortak kontrol metodu: 3-6 numaralı kurallar yalnızca burada yazılır.
         // Veritabanına gitmez; gereken her şey parametre olarak gelir. GetAvailableSlotsAsync bunu her aday saat için,
-        // CreateAsync tek bir aralık için çağırır. "now" da parametredir ki tüm adaylar aynı ana göre denensin.
+        // CheckBookingRulesAsync (CreateAsync ve UpdateAsync) tek bir aralık için çağırır.
+        // "now" da parametredir ki tüm adaylar aynı ana göre denensin.
         private static ServiceResult<bool> CheckTimeRules(DateTime start, DateTime end, DateTime now,
             ClinicWorkingHour? workingHour, ICollection<VeterinarianAvailability> veterinarianAvailabilities,
             List<Appointment> veterinarianAppointments)

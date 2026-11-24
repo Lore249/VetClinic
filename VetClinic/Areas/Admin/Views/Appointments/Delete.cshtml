@@ -1,0 +1,21 @@
+@model Appointment
+@{
+    ViewData["Title"] = "Randevuyu Sil";
+}
+
+<h1 class="h3 mb-3">Randevuyu Sil</h1>
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<partial name="_AppointmentInfo" model="Model" />
+
+<div class="alert alert-warning">
+    Silinen randevu geri alınamaz. Tamamlanmış bir randevu silinirse muayene notu da kaybolur ve ciro raporundan çıkar.
+    Randevunun gerçekleşmeyeceği durumlarda iptal etmek çoğu zaman daha doğrudur.
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Sil</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Vazgeç</a>
+</form>

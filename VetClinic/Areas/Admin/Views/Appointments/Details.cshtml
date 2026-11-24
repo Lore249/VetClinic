@@ -1,0 +1,48 @@
+@model AppointmentDetailsViewModel
+@{
+    ViewData["Title"] = "Randevu Detayı";
+    var appointment = Model.Appointment;
+}
+
+<h1 class="h3 mb-3">Randevu Detayı</h1>
+
+@* Servisin kural ihlali mesajları burada görünür. *@
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<partial name="_AppointmentInfo" model="appointment" />
+
+@* Düğmeler yalnızca uygun durumda gösterilir; bu bir kolaylıktır. Asıl kural her istekte serviste yeniden kontrol edilir. *@
+@if (appointment.Status == AppointmentStatus.Pending)
+{
+    <div class="card kk-card mb-3">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-3">Onayla ya da reddet</h2>
+            <form asp-action="Approve" asp-route-id="@appointment.Id" method="post" class="mb-4">
+                <button type="submit" class="btn btn-primary">Onayla</button>
+            </form>
+            <partial name="_RejectAppointmentForm" model="new RejectAppointmentViewModel { AppointmentId = appointment.Id }" />
+        </div>
+    </div>
+}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    @if (appointment.Status == AppointmentStatus.Pending || appointment.Status == AppointmentStatus.Approved)
+    {
+        <a asp-action="Edit" asp-route-id="@appointment.Id" class="btn btn-outline-primary">Hekimi ya da Saati Değiştir</a>
+    }
+
+    @if (Model.CanCancel)
+    {
+        <form asp-action="Cancel" asp-route-id="@appointment.Id" method="post" onsubmit="return confirm('Bu randevu iptal edilsin mi?');">
+            <button type="submit" class="btn btn-outline-danger">İptal Et</button>
+        </form>
+    }
+
+    <a asp-action="Delete" asp-route-id="@appointment.Id" class="btn btn-outline-danger">Sil</a>
+</div>
+
+<a asp-action="Index">&larr; Randevular</a>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
