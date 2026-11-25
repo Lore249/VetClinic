@@ -1,3 +1,4 @@
+using VetClinic.Models.Dtos;
 using VetClinic.Models.Entities;
 using VetClinic.Models.ViewModels;
 
@@ -10,6 +11,9 @@ namespace VetClinic.Services
         Task<List<Veterinarian>> GetAllAsync();
 
         Task<Veterinarian?> GetByIdAsync(int id);
+
+        // REST API için hekim listesi (DTO). specialtyId verilirse yalnızca o uzmanlığa sahip hekimler; uzmanlık yoksa NotFound.
+        Task<ServiceResult<List<VeterinarianDto>>> GetPublicListAsync(int? specialtyId);
 
         Task<ServiceResult<int>> CreateAsync(VeterinarianCreateViewModel model);
 

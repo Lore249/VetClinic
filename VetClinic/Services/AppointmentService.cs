@@ -158,6 +158,41 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(a => a.Id == appointmentId);
         }
 
+        public async Task<ServiceResult<AppointmentDto>> GetAppointmentDtoAsync(int appointmentId, string userId, string userRole)
+        {
+            // Görünürlük kuralı aynı (VisibleTo); entity yerine Select ile DTO'ya eşlenir.
+            // EnumTexts.ToTurkish SQL'e çevrilemez; EF Core son Select'teki bu çağrıyı satırlar geldikten sonra C#'ta çalıştırır.
+            var appointment = await VisibleTo(userId, userRole)
+                .AsNoTracking()
+                .Where(a => a.Id == appointmentId)
+                .Select(a => new AppointmentDto
+                {
+                    Id = a.Id,
+                    PetId = a.PetId,
+                    PetName = a.Pet.Name,
+                    ServiceId = a.ServiceId,
+                    ServiceName = a.Service.Name,
+                    VeterinarianId = a.VeterinarianId,
+                    VeterinarianName = a.Veterinarian.Title + " " + a.Veterinarian.User.FullName,
+                    StartTime = a.StartTime,
+                    EndTime = a.EndTime,
+                    DurationMinutes = a.DurationMinutes,
+                    Price = a.Price,
+                    Status = EnumTexts.ToTurkish(a.Status),
+                    RejectionReason = a.RejectionReason,
+                    ExaminationNote = a.ExaminationNote,
+                    CreatedAt = a.CreatedAt
+                })
+                .FirstOrDefaultAsync();
+
+            if (appointment == null)
+            {
+                return ServiceResult<AppointmentDto>.NotFound("Randevu bulunamadı.");
+            }
+
+            return ServiceResult<AppointmentDto>.Ok(appointment);
+        }
+
         public bool CanCancel(Appointment appointment)
         {
             return CheckCancelRules(appointment, DateTime.Now).Success;

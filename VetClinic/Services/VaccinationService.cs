@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using VetClinic.Data;
+using VetClinic.Models.Dtos;
 using VetClinic.Models.Entities;
 using VetClinic.Models.ViewModels;
 
@@ -21,6 +22,42 @@ namespace VetClinic.Services
                 .AsNoTracking()
                 .Include(r => r.Pet)
                 .FirstOrDefaultAsync(r => r.Id == recordId && r.Pet.OwnerId == ownerId);
+        }
+
+        public async Task<ServiceResult<VaccinationScheduleDto>> GetScheduleAsync(string ownerId, int petId)
+        {
+            // Sahiplik filtresi: başkasının hayvanı "bulunamadı"dır.
+            var pet = await _context.Pets.AsNoTracking().FirstOrDefaultAsync(p => p.Id == petId && p.OwnerId == ownerId);
+            if (pet == null)
+            {
+                return ServiceResult<VaccinationScheduleDto>.NotFound("Hayvan bulunamadı.");
+            }
+
+            var records = await _context.VaccinationRecords
+                .AsNoTracking()
+                .Where(r => r.PetId == petId)
+                .Select(r => new VaccinationDto
+                {
+                    Id = r.Id,
+                    VaccineName = r.VaccineName,
+                    AdministeredOn = r.AdministeredOn,
+                    NextDoseOn = r.NextDoseOn
+                })
+                .ToListAsync();
+
+            // Hangi kaydın yaklaşan, hangisinin gecikmiş sayılacağı yalnızca burada belirlenir.
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
+            var schedule = new VaccinationScheduleDto
+            {
+                PetId = pet.Id,
+                PetName = pet.Name,
+                Past = records.OrderByDescending(r => r.AdministeredOn).ToList(),
+                Upcoming = records.Where(r => r.NextDoseOn >= today).OrderBy(r => r.NextDoseOn).ToList(),
+                Overdue = records.Where(r => r.NextDoseOn < today).OrderBy(r => r.NextDoseOn).ToList()
+            };
+
+            return ServiceResult<VaccinationScheduleDto>.Ok(schedule);
         }
 
         public async Task<ServiceResult<int>> CreateAsync(string ownerId, VaccinationFormViewModel model)

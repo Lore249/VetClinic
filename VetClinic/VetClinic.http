@@ -1,0 +1,186 @@
+# Kerem'in Kliniği - REST API örnek istekleri
+# Visual Studio'da her isteğin üstündeki "Send request" bağlantısıyla gönderilir; cevap sağdaki panelde görünür.
+# Önce uygulamayı çalıştırın (F5). "https" profiliyle adres aşağıdaki gibidir; "http" profilinde http://localhost:5191 yazın.
+@host = https://localhost:7200
+
+# Gelecekte, kliniğin ve hekimin çalıştığı bir gün yazın (Pazar kapalı). 2026-11-30 bir Pazartesi.
+@date = 2026-11-30
+
+# Kimlikler seed verisine göredir; veritabanınızda farklıysa GET /api/veterinarians cevabından bakabilirsiniz.
+# Ece'nin hayvanları: 1 Fıstık, 2 Paşa, 3 Bulut. Hizmetler: 1 Muayene, 2 Aşı, 3 Kısırlaştırma, 4 Diş Temizliği, 5 Tıraş ve Bakım.
+# Hekimler: 1 Selin Aydemir, 2 Okan Yalçınkaya, 3 Defne Arıkan. Uzmanlıklar: 1 Dermatoloji, 2 Dahiliye, 3 Etoloji, 4 Hayvan Refahı.
+
+
+### 1) Üye için token al -> 200 (cevaptaki "token" aşağıdaki isteklerde kullanılır)
+# @name ece
+POST {{host}}/api/auth/token
+Content-Type: application/json
+
+{
+  "email": "ece.kandemir@example.com",
+  "password": "sau"
+}
+
+### 2) Hatalı şifre -> 401
+POST {{host}}/api/auth/token
+Content-Type: application/json
+
+{
+  "email": "ece.kandemir@example.com",
+  "password": "yanlis"
+}
+
+### 3) Eksik alan -> 400 (alan hataları "errors" içinde)
+POST {{host}}/api/auth/token
+Content-Type: application/json
+
+{
+  "email": "ece.kandemir@example.com"
+}
+
+### 4) Admin için token al -> 200
+# @name admin
+POST {{host}}/api/auth/token
+Content-Type: application/json
+
+{
+  "email": "b241210016@sakarya.edu.tr",
+  "password": "sau"
+}
+
+
+### 5) Tüm hekimler (anonim) -> 200
+GET {{host}}/api/veterinarians
+
+### 6) Uzmanlığa göre filtre (Dahiliye) -> 200
+GET {{host}}/api/veterinarians?specialtyId=2
+
+### 7) Olmayan uzmanlık -> 404
+GET {{host}}/api/veterinarians?specialtyId=999
+
+### 8) O gün Muayene için uygun hekimler ve saatler (anonim) -> 200
+GET {{host}}/api/veterinarians/available?serviceId=1&date={{date}}
+
+### 9) Parametre eksik -> 400
+GET {{host}}/api/veterinarians/available?serviceId=1
+
+### 10) Tarih biçimi hatalı -> 400
+GET {{host}}/api/veterinarians/available?serviceId=1&date=abc
+
+### 11) Olmayan hizmet -> 404
+GET {{host}}/api/veterinarians/available?serviceId=999&date={{date}}
+
+
+### 12) Fıstık'ın aşı takvimi (geçmiş, yaklaşan, gecikmiş) -> 200
+GET {{host}}/api/pets/1/vaccinations
+Authorization: Bearer {{ece.response.body.$.token}}
+
+### 13) Token olmadan -> 401 (giriş sayfasına yönlendirme yok)
+GET {{host}}/api/pets/1/vaccinations
+
+### 14) Başkasının ya da olmayan hayvan -> 404
+GET {{host}}/api/pets/999/vaccinations
+Authorization: Bearer {{ece.response.body.$.token}}
+
+
+### 15) Randevu oluştur: Fıstık, Muayene, Selin, {{date}} 10:00 -> 201 + Location başlığı
+# @name createAppointment
+POST {{host}}/api/appointments
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "petId": 1,
+  "serviceId": 1,
+  "veterinarianId": 1,
+  "startTime": "{{date}}T10:00"
+}
+
+### 16) Aynı isteği tekrar gönder: hekim aynı saatte dolu -> 409
+POST {{host}}/api/appointments
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "petId": 2,
+  "serviceId": 1,
+  "veterinarianId": 1,
+  "startTime": "{{date}}T10:00"
+}
+
+### 17) Kural ihlali: hekim bu hizmeti vermiyor (Defne + Kısırlaştırma) -> 400
+POST {{host}}/api/appointments
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "petId": 1,
+  "serviceId": 3,
+  "veterinarianId": 3,
+  "startTime": "{{date}}T11:00"
+}
+
+### 18) Kural ihlali: öğle arasına denk geliyor (Selin, 12:15-12:45) -> 400
+POST {{host}}/api/appointments
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "petId": 1,
+  "serviceId": 1,
+  "veterinarianId": 1,
+  "startTime": "{{date}}T12:15"
+}
+
+### 19) Olmayan ya da başkasının hayvanı -> 404
+POST {{host}}/api/appointments
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "petId": 999,
+  "serviceId": 1,
+  "veterinarianId": 1,
+  "startTime": "{{date}}T11:00"
+}
+
+### 20) Alan eksik -> 400
+POST {{host}}/api/appointments
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "petId": 1
+}
+
+### 21) 15. istekte oluşan randevuyu getir -> 200
+GET {{host}}/api/appointments/{{createAppointment.response.body.$.id}}
+Authorization: Bearer {{ece.response.body.$.token}}
+
+### 22) Olmayan ya da başkasının randevusu -> 404
+GET {{host}}/api/appointments/999
+Authorization: Bearer {{ece.response.body.$.token}}
+
+
+### 23) Hizmet raporu (Admin) -> 200
+GET {{host}}/api/reports/services
+Authorization: Bearer {{admin.response.body.$.token}}
+
+### 24) Tarih aralığıyla rapor (Admin) -> 200
+GET {{host}}/api/reports/services?from=2026-01-01&to=2026-12-31
+Authorization: Bearer {{admin.response.body.$.token}}
+
+### 25) Başlangıç bitişten sonra -> 400
+GET {{host}}/api/reports/services?from=2026-12-31&to=2026-01-01
+Authorization: Bearer {{admin.response.body.$.token}}
+
+### 26) Üye token'ıyla rapor -> 403 (giriş var, rol yetmiyor)
+GET {{host}}/api/reports/services
+Authorization: Bearer {{ece.response.body.$.token}}
+
+### 27) Token olmadan rapor -> 401
+GET {{host}}/api/reports/services
+
+### 28) Bozuk token -> 401
+GET {{host}}/api/reports/services
+Authorization: Bearer bozuk.token.degeri

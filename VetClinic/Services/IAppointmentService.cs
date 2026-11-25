@@ -22,6 +22,9 @@ namespace VetClinic.Services
         // Tek bir randevu; kullanıcı bu randevuyu göremiyorsa null döner.
         Task<Appointment?> GetAppointmentAsync(int appointmentId, string userId, string userRole);
 
+        // REST API için tek bir randevu (DTO); kullanıcı bu randevuyu göremiyorsa NotFound.
+        Task<ServiceResult<AppointmentDto>> GetAppointmentDtoAsync(int appointmentId, string userId, string userRole);
+
         // Randevu şu anda iptal edilebilir / tamamlanabilir mi? Detay sayfaları düğmeyi göstermek için sorar;
         // CancelAsync ve CompleteAsync de aynı kuralları uygular, kurallar iki yerde yazılmaz.
         bool CanCancel(Appointment appointment);

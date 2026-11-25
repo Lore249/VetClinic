@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using VetClinic.Data;
 using VetClinic.Helpers;
+using VetClinic.Models.Dtos;
 using VetClinic.Models.Entities;
 using VetClinic.Models.ViewModels;
 
@@ -45,6 +46,45 @@ namespace VetClinic.Services
                 .Include(v => v.Availabilities)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(v => v.Id == id);
+        }
+
+        public async Task<ServiceResult<List<VeterinarianDto>>> GetPublicListAsync(int? specialtyId)
+        {
+            if (specialtyId != null && !await _context.Specialties.AnyAsync(s => s.Id == specialtyId))
+            {
+                return ServiceResult<List<VeterinarianDto>>.NotFound("Uzmanlık bulunamadı.");
+            }
+
+            var query = _context.Veterinarians.AsNoTracking();
+
+            // LINQ filtresi: uzmanlık verildiyse yalnızca o uzmanlığa sahip hekimler. Where SQL'e (EXISTS) çevrilir.
+            if (specialtyId != null)
+            {
+                query = query.Where(v => v.Specialties.Any(s => s.Id == specialtyId));
+            }
+
+            // Entity yerine DTO: Select ile yalnızca gereken alanlar seçilir, SQL de yalnızca bu sütunları getirir.
+            var veterinarians = await query
+                .OrderBy(v => v.User.FullName)
+                .Select(v => new VeterinarianDto
+                {
+                    Id = v.Id,
+                    Title = v.Title,
+                    FullName = v.User.FullName,
+                    Specialties = v.Specialties
+                        .OrderBy(s => s.Name)
+                        .Select(s => new IdNameDto { Id = s.Id, Name = s.Name })
+                        .ToList(),
+                    Services = v.Services
+                        .Where(s => s.IsActive)
+                        .OrderBy(s => s.Name)
+                        .Select(s => new IdNameDto { Id = s.Id, Name = s.Name })
+                        .ToList()
+                })
+                .AsSplitQuery()
+                .ToListAsync();
+
+            return ServiceResult<List<VeterinarianDto>>.Ok(veterinarians);
         }
 
         public async Task<ServiceResult<int>> CreateAsync(VeterinarianCreateViewModel model)
