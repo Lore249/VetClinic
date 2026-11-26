@@ -1,12 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using VetClinic.Models.Dtos;
 using VetClinic.Models.Entities;
 
 namespace VetClinic.Models.ViewModels
 {
-    // Randevu alma ekranı. 1. adımda hayvan, hizmet ve tarih seçilir (GET formu); 2. adımda boş saatlerden birine tıklanır
-    // ve hekim ile başlangıç saati, tıklanan düğmenin adresinden gelir (POST).
+    // Randevu alma ekranı. 1. adımda hayvan, hizmet ve tarih seçilir; boş saatler REST API'den gelir. 2. adımda boş saatlerden
+    // birine tıklanır ve hekim ile başlangıç saati, tıklanan düğmenin adresinden gelir (POST).
     // Bitiş saati, süre ve ücret formda yoktur: servis bunları hizmetten hesaplar.
     // Alanlar nullable: seçim kutuları "Seçin" ile boş açılır, boş gönderilirse [Required] mesajı çıkar.
     public class AppointmentCreateViewModel
@@ -36,9 +35,5 @@ namespace VetClinic.Models.ViewModels
 
         [BindNever]
         public List<Service> ServiceOptions { get; set; } = new List<Service>();
-
-        // null: henüz arama yapılmadı. Boş liste: arandı ama uygun saat yok.
-        [BindNever]
-        public List<VeterinarianSlotsDto>? Slots { get; set; }
     }
 }

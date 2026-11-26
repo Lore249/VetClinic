@@ -47,8 +47,8 @@ namespace VetClinic.Controllers
             return View(BuildDetails(appointment));
         }
 
-        // 1. adım (GET): /Appointments/Create?PetId=1&ServiceId=2&Date=2026-11-24
-        // Hizmet ve tarih seçilmişse o günün boş saatleri sunucuda hesaplanıp sayfayla birlikte gönderilir.
+        // 1. adım (GET): sayfa ve seçim kutuları. Seçimler adreste varsa (/Appointments/Create?PetId=1&ServiceId=2&Date=2026-11-24)
+        // form dolu açılır. Boş saatleri sunucu hesaplamaz; sayfadaki betik (wwwroot/js/appointment-slots.js) REST API'den alır.
         [HttpGet]
         public async Task<IActionResult> Create(int? petId, int? serviceId, DateOnly? date)
         {
@@ -59,8 +59,8 @@ namespace VetClinic.Controllers
                 Date = date ?? DateOnly.FromDateTime(DateTime.Today)
             };
 
-            // FillPageAsync null dönerse sayfa gösterilir; değilse (ör. olmayan bir hizmet için 404) o sonuç döner.
-            return await FillPageAsync(model) ?? View(model);
+            await FillOptionsAsync(model);
+            return View(model);
         }
 
         // 2. adım (POST): bir saat düğmesine tıklanınca. Hayvan, hizmet ve tarih formdaki gizli alanlardan;
@@ -89,9 +89,10 @@ namespace VetClinic.Controllers
                 }
             }
 
-            // Hata varsa (ör. saat bu arada başkası tarafından alındıysa) aynı arama yeniden gösterilir;
-            // boş saatler güncel hâliyle yeniden hesaplandığı için dolan saat listeden kalkar.
-            return await FillPageAsync(model) ?? View(model);
+            // Hata varsa (ör. saat bu arada başkası tarafından alındıysa) sayfa aynı seçimlerle ve hata mesajıyla yeniden açılır;
+            // betik boş saatleri API'den yeniden aldığı için dolan saat listede görünmez.
+            await FillOptionsAsync(model);
+            return View(model);
         }
 
         [HttpPost]
@@ -122,26 +123,11 @@ namespace VetClinic.Controllers
             return View(nameof(Details), BuildDetails(appointment));
         }
 
-        // Randevu ekranının seçeneklerini ve (hizmet ile tarih seçiliyse) boş saatleri doldurur.
-        // Boş saatler alınamazsa eşleme sonucunu döner (olmayan hizmet için 404); null dönerse sayfa gösterilebilir.
-        private async Task<IActionResult?> FillPageAsync(AppointmentCreateViewModel model)
+        // Randevu ekranının seçim kutuları: üyenin hayvanları ve aktif hizmetler.
+        private async Task FillOptionsAsync(AppointmentCreateViewModel model)
         {
             model.PetOptions = await _petService.GetMyPetsAsync(CurrentUserId);
             model.ServiceOptions = await _serviceCatalog.GetActiveAsync();
-
-            if (model.ServiceId == null || model.Date == null)
-            {
-                return null;
-            }
-
-            var result = await _appointmentService.GetAvailableSlotsAsync(model.ServiceId.Value, model.Date.Value);
-            if (result.Success)
-            {
-                model.Slots = result.Data;
-                return null;
-            }
-
-            return this.HandleServiceError(result);
         }
 
         private AppointmentDetailsViewModel BuildDetails(Appointment appointment)

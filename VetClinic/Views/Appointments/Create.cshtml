@@ -1,10 +1,6 @@
 @model AppointmentCreateViewModel
 @{
     ViewData["Title"] = "Randevu Al";
-
-    // Seçilen hayvan ve hizmet, boş saatlerin üstündeki özet satırında gösterilir.
-    var selectedPet = Model.PetOptions.FirstOrDefault(p => p.Id == Model.PetId);
-    var selectedService = Model.ServiceOptions.FirstOrDefault(s => s.Id == Model.ServiceId);
 }
 
 <h1 class="h3 mb-1">Randevu Al</h1>
@@ -23,8 +19,8 @@ else
 {
     <div class="card kk-card mb-4">
         <div class="card-body p-4">
-            @* 1. adım: GET formu. Değerler adres çubuğuna yazılır; hiçbir şey kaydedilmediği için POST değildir. *@
-            <form asp-action="Create" method="get" class="row g-3 align-items-start">
+            @* 1. adım: seçim formu. Gönderilince sayfa yenilenmez; appointment-slots.js boş saatleri REST API'den alır. *@
+            <form id="slot-search-form" asp-action="Create" method="get" class="row g-3 align-items-start">
                 <div class="col-md-4">
                     <label asp-for="PetId" class="form-label"></label>
                     <select asp-for="PetId" class="form-select">
@@ -65,28 +61,24 @@ else
     <span asp-validation-for="VeterinarianId" class="text-danger d-block"></span>
     <span asp-validation-for="StartTime" class="text-danger d-block"></span>
 
-    @if (Model.Slots != null && selectedService != null)
-    {
+    @* 2. adım: boş saatler. Bölüm ilk arama yapılana kadar gizlidir (d-none). *@
+    <div id="slot-area" class="d-none">
         <h2 class="h5 mb-1">Boş saatler</h2>
-        <p class="text-muted mb-3">
-            @(selectedPet?.Name ?? "Hayvan seçilmedi") · @selectedService.Name (@selectedService.DurationMinutes dk, @selectedService.Price.ToString("N2") ₺)
-            · @Model.Date!.Value.ToString("dd.MM.yyyy dddd")
-        </p>
+        <p id="slot-summary" class="text-muted mb-3"></p>
 
-        @* 2. adım: POST formu. Gizli alanlar elle yazıldı: asp-for kullanılsaydı yukarıdaki seçim kutularıyla aynı id'ler oluşurdu. *@
-        <form asp-action="Create" method="post">
+        @* POST formu. Gizli alanlar elle yazıldı: asp-for kullanılsaydı yukarıdaki seçim kutularıyla aynı id'ler oluşurdu.
+           Değerlerini arama sırasında betik doldurur; saat düğmeleri de betik tarafından #slot-list içine eklenir. *@
+        <form id="booking-form" asp-action="Create" method="post">
             <input type="hidden" name="PetId" value="@Model.PetId" />
             <input type="hidden" name="ServiceId" value="@Model.ServiceId" />
             <input type="hidden" name="Date" value="@Model.Date?.ToString("yyyy-MM-dd")" />
 
-            @* Boş saat listesi ayrı bir parça (partial) olarak tutulur; formun geri kalanına dokunmadan değiştirilebilir. *@
-            <div id="slot-list">
-                <partial name="_SlotList" model="Model" />
-            </div>
+            <div id="slot-list"></div>
         </form>
-    }
+    </div>
 }
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/appointment-slots.js" asp-append-version="true"></script>
 }

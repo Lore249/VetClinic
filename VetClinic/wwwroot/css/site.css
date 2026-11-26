@@ -104,6 +104,24 @@ h1, h2, h3, .h1, .h2, .h3 {
   border-radius: .5rem;
 }
 
+/* Ana sayfadaki hizmet kartlarında ücret ve süre */
+.kk-price {
+  font-weight: 800;
+  color: var(--kk-green);
+}
+
+.kk-badge-light {
+  background-color: var(--kk-green-light);
+  color: var(--kk-green);
+  font-weight: 600;
+}
+
+/* Çalışma saatleri tablosunda bugünün satırı */
+.kk-today td {
+  background-color: var(--kk-green-light);
+  font-weight: 700;
+}
+
 /* Logo yanındaki klinik adı */
 .kk-brand-text {
   font-weight: 800;

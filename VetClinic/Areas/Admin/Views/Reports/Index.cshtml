@@ -1,0 +1,55 @@
+@{
+    ViewData["Title"] = "Hizmet Raporu";
+}
+
+<h1 class="h3 mb-1">Hizmet Raporu</h1>
+<p class="text-muted mb-3">
+    Hizmet türüne göre randevu sayısı ve tamamlanan randevuların cirosu. Veriler REST API'den sayfa yenilenmeden alınır.
+    Tarihler randevunun gününe göredir ve dahildir; boş bırakılırsa tüm randevular sayılır.
+</p>
+
+<div class="card kk-card mb-3">
+    <div class="card-body p-4">
+        @* Form sunucuya gönderilmez; "Raporu Getir" düğmesi admin-report.js'teki AJAX isteğini başlatır. *@
+        <form id="report-form" class="row g-3 align-items-end">
+            <div class="col-sm-4">
+                <label for="report-from" class="form-label">Başlangıç</label>
+                <input type="date" id="report-from" class="form-control" />
+            </div>
+            <div class="col-sm-4">
+                <label for="report-to" class="form-label">Bitiş</label>
+                <input type="date" id="report-to" class="form-control" />
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn btn-primary w-100">Raporu Getir</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* API'nin döndürdüğü hata mesajı (ör. "Başlangıç tarihi bitiş tarihinden sonra olamaz.") burada gösterilir. *@
+<div id="report-message" class="alert alert-danger d-none"></div>
+
+<div class="card kk-card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Hizmet</th>
+                        <th class="text-end">Randevu</th>
+                        <th class="text-end">Tamamlanan</th>
+                        <th class="text-end">Ciro</th>
+                    </tr>
+                </thead>
+                @* Satırlar ve toplam satırı JavaScript ile doldurulur. *@
+                <tbody id="report-body"></tbody>
+                <tfoot id="report-totals" class="fw-bold"></tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin-report.js" asp-append-version="true"></script>
+}
