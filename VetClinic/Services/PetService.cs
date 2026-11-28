@@ -42,6 +42,14 @@ namespace VetClinic.Services
                 .FirstOrDefaultAsync(p => p.Id == petId && p.OwnerId == ownerId);
         }
 
+        public async Task<Pet?> FindMyPetByNameAsync(string ownerId, string name)
+        {
+            // Karşılaştırma SQL'de yapılmaz: SQL Server'ın harmanlaması Türkçe I/ı kuralını bilmez.
+            // Kullanıcının hayvanları (birkaç kayıt) belleğe alınır ve ad C#'ta Türkçe kurallarla karşılaştırılır.
+            var pets = await GetMyPetsAsync(ownerId);
+            return pets.FirstOrDefault(p => IsSameNameInTurkish(p.Name, name.Trim()));
+        }
+
         public async Task<ServiceResult<int>> CreateAsync(string ownerId, PetFormViewModel model)
         {
             // Yeni kayıtta karşılaştırmadan hariç tutulacak kayıt yok (0). Formdan gelen Id kullanılmaz.
@@ -167,8 +175,15 @@ namespace VetClinic.Services
         //    ve IPEK = ipek sayar. Bu kontrol olmasa servis kabul eder, veritabanı reddeder ve kullanıcı hata sayfası görürdü.
         private static bool IsSameName(string first, string second)
         {
-            return string.Compare(first, second, TurkishCulture, CompareOptions.IgnoreCase) == 0
+            return IsSameNameInTurkish(first, second)
                 || string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Türkçe kurallarla, büyük/küçük harfe duyarsız karşılaştırma: FISTIK = fıstık, ama Fistik ≠ Fıstık.
+        // Hem ad benzersizliği (IsSameName) hem MCP'deki hayvan araması (FindMyPetByNameAsync) bunu kullanır.
+        private static bool IsSameNameInTurkish(string first, string second)
+        {
+            return string.Compare(first, second, TurkishCulture, CompareOptions.IgnoreCase) == 0;
         }
 
         private static string? ValidatePhoto(IFormFile? photo)

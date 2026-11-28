@@ -122,6 +122,12 @@ h1, h2, h3, .h1, .h2, .h3 {
   font-weight: 700;
 }
 
+/* Hatasız doğrulama özeti formda boş bir satır bırakmasın. Hata olunca jQuery Validation sınıfı
+   validation-summary-errors yapar ve özet görünür; sunucudan dönen hatalarda da sınıf zaten böyledir. */
+.validation-summary-valid {
+  display: none;
+}
+
 /* Logo yanındaki klinik adı */
 .kk-brand-text {
   font-weight: 800;

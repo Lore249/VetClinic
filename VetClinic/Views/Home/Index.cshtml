@@ -23,6 +23,14 @@
                 <a asp-controller="Appointments" asp-action="Create" class="btn btn-primary btn-lg me-2">Randevu Al</a>
                 <a asp-controller="Appointments" asp-action="Index" class="btn btn-outline-primary btn-lg">Randevularım</a>
             }
+            else if (User.IsInRole(AppRoles.Veterinarian))
+            {
+                <a asp-controller="VeterinarianPanel" asp-action="Index" class="btn btn-primary btn-lg">Hekim Paneli</a>
+            }
+            else if (User.IsInRole(AppRoles.Admin))
+            {
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="btn btn-primary btn-lg">Yönetim Paneli</a>
+            }
         </div>
     </div>
 </section>

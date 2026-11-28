@@ -5,13 +5,28 @@ namespace VetClinic.Helpers
 {
     // Servisten gelen başarısız sonucu arayüzün cevabına çeviren tek yer (eşleme tablosu):
     //
-    //   ErrorType   MVC (HandleServiceError)     REST API (ToApiError)
-    //   NotFound    404 (NotFound())             404
-    //   Forbidden   403 (Forbid())               403
-    //   Validation  formda ModelState hatası     400
-    //   Conflict    formda ModelState hatası     409
+    //   ErrorType   MVC (HandleServiceError)     REST API (ToApiError)   MCP (ToMcpMessage)
+    //   NotFound    404 (NotFound())             404                     nedeni açıklayan metin
+    //   Forbidden   403 (Forbid())               403                     nedeni açıklayan metin
+    //   Validation  formda ModelState hatası     400                     nedeni açıklayan metin
+    //   Conflict    formda ModelState hatası     409                     nedeni açıklayan metin
     public static class ServiceResultExtensions
     {
+        // MCP sütunu. Yapay zekâ asistanı bu metni okuyup kullanıcıya aktarır; servisin mesajı aynen korunur,
+        // önüne yalnızca hatanın türü eklenir. Örnek: "Saat çakışması: Hekimin 10:00-10:30 arasında başka bir randevusu var."
+        public static string ToMcpMessage<T>(this ServiceResult<T> result)
+        {
+            var kind = result.ErrorType switch
+            {
+                ErrorType.NotFound => "Bulunamadı",
+                ErrorType.Forbidden => "Yetki yok",
+                ErrorType.Conflict => "Saat çakışması",
+                _ => "Kural ihlali"
+            };
+
+            return kind + ": " + result.ErrorMessage;
+        }
+
         // REST API sütunu. Gövde, [ApiController]'ın otomatik 400 cevabıyla aynı standart biçimdedir
         // (ProblemDetails, RFC 7807): { "title": "Çakışma", "status": 409, "detail": "Hekimin 10:00-10:30 arasında ..." }.
         // Türkçe başlıklar Program.cs'teki ClientErrorMapping ayarından gelir.

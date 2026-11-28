@@ -1,7 +1,7 @@
 # Kerem'in Kliniği - REST API örnek istekleri
 # Visual Studio'da her isteğin üstündeki "Send request" bağlantısıyla gönderilir; cevap sağdaki panelde görünür.
 # Önce uygulamayı çalıştırın (F5). "https" profiliyle adres aşağıdaki gibidir; "http" profilinde http://localhost:5191 yazın.
-@host = https://localhost:7200
+@host = http://localhost:5191
 
 # Gelecekte, kliniğin ve hekimin çalıştığı bir gün yazın (Pazar kapalı). 2026-11-30 bir Pazartesi.
 @date = 2026-11-30
@@ -184,3 +184,40 @@ GET {{host}}/api/reports/services
 ### 28) Bozuk token -> 401
 GET {{host}}/api/reports/services
 Authorization: Bearer bozuk.token.degeri
+
+
+# ---------------------------------------------------------------------------------------------------
+# MCP ucu (/mcp). Asıl deneme MCP Inspector ile yapılır; bu istekler aynı ucu elle çağırır.
+# İstekler JSON-RPC biçimindedir; cevap "event: message / data: {...}" satırlarıyla gelir.
+# ---------------------------------------------------------------------------------------------------
+
+### 29) MCP token olmadan -> 401
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{ "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+
+### 30) MCP araç listesi (üye token'ıyla) -> 200, 5 araç ve Türkçe açıklamaları
+POST {{host}}/mcp
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{ "jsonrpc": "2.0", "id": 1, "method": "tools/list" }
+
+### 31) asi_takvimi: ad büyük harfle yazılsa da bulunur (FISTIK = Fıstık)
+POST {{host}}/mcp
+Authorization: Bearer {{ece.response.body.$.token}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{ "jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": { "name": "asi_takvimi", "arguments": { "hayvanAdi": "FISTIK" } } }
+
+### 32) Admin token'ıyla araç -> "Bu araçlar yalnızca üye hesaplarıyla kullanılabilir."
+POST {{host}}/mcp
+Authorization: Bearer {{admin.response.body.$.token}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "hizmetler", "arguments": {} } }

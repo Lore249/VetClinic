@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using VetClinic.Data;
 using VetClinic.Helpers;
+using VetClinic.Mcp;
 using VetClinic.Models.Entities;
 using VetClinic.Services;
 
@@ -180,6 +181,28 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
+// MCP sunucusu: aynı uygulamanın içinde, /mcp adresinde, HTTP (Streamable HTTP) taşımasıyla çalışır.
+// Araçlar Mcp/VetClinicTools.cs'te; MVC ve REST API'nin kullandığı servisleri çağırırlar.
+// Araçlar kullanıcıyı isteğin HttpContext'inden okuduğu için IHttpContextAccessor eklenir.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMcpServer()
+    .WithHttpTransport(options =>
+    {
+        // Oturum tutulmaz: her MCP isteği kendi HTTP isteği içinde, kendi token'ıyla işlenir.
+        options.Stateless = true;
+    })
+    .WithTools<VetClinicTools>();
+
+// /mcp yalnızca JWT ile çağrılabilir: tarayıcı çerezi kabul edilmez, token yoksa ya da geçersizse 401 döner.
+// Rol burada istenmez; Üye olmayan kullanıcı araçlardan açıklayıcı bir metin alır (VetClinicTools.GetMemberUserId).
+const string McpPolicy = "McpJwtOnly";
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(McpPolicy, policy => policy
+        .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser());
+});
+
 var app = builder.Build();
 
 // Açılışta bekleyen migration'lar uygulanır, ardından başlangıç verileri eklenir.
@@ -195,6 +218,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Tarayıcıda açılan sayfalarda gövdesiz bir hata cevabı (ör. başkasının kaydının adresi yazılınca 404) boş ya da tarayıcının
+// İngilizce sayfası olarak görünmesin; aynı durum koduyla Türkçe bir sayfa gösterilir (HomeController.StatusPage).
+// REST API ve MCP isteklerine uygulanmaz: onlar durum kodunu ve kendi gövdelerini olduğu gibi döndürür.
+app.UseWhen(context => !IsApiOrMcpRequest(context.Request),
+    branch => branch.UseStatusCodePagesWithReExecute("/Home/StatusPage", "?code={0}"));
 
 // Kültür bilgisayarın ayarına bırakılmaz: sayı, tarih ve para biçimleri her makinede tr-TR olur.
 var turkishCulture = new CultureInfo("tr-TR");
@@ -219,6 +248,9 @@ app.MapStaticAssets();
 
 // REST API controller'ları ([ApiController], Controllers/Api) adreslerini [Route] attribute'larından alır.
 app.MapControllers();
+
+// MCP ucu: /mcp. RequireAuthorization ile yukarıdaki "yalnızca JWT" politikası uygulanır.
+app.MapMcp("/mcp").RequireAuthorization(McpPolicy);
 
 // Admin paneli bir Area'dır: /Admin/Services/Edit/3 gibi adresler. /Admin yazılınca panelin ana sayfası açılır.
 // Bu route varsayılan route'tan önce tanımlanır; {area:exists} yalnızca var olan bir area adıyla eşleşir.

@@ -11,6 +11,10 @@ namespace VetClinic.Services
 
         Task<Pet?> GetMyPetAsync(string ownerId, int petId);
 
+        // MCP araçları hayvanı adıyla bulur. Ad Türkçe kurallarla, büyük/küçük harfe duyarsız karşılaştırılır (FISTIK = fıstık).
+        // Kullanıcının bu adda hayvanı yoksa null döner.
+        Task<Pet?> FindMyPetByNameAsync(string ownerId, string name);
+
         Task<ServiceResult<int>> CreateAsync(string ownerId, PetFormViewModel model);
 
         Task<ServiceResult<bool>> UpdateAsync(string ownerId, PetFormViewModel model);

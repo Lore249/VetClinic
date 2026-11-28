@@ -30,6 +30,13 @@ namespace VetClinic.Controllers
             return View(model);
         }
 
+        // Program.cs'teki UseStatusCodePagesWithReExecute, gövdesiz hata cevaplarında (404 gibi) isteği buraya yeniden çalıştırır.
+        // Durum kodu değişmez (404 yine 404'tür); kullanıcıya yalnızca boş sayfa yerine Türkçe bir açıklama gösterilir.
+        public IActionResult StatusPage(int code)
+        {
+            return View(code);
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
